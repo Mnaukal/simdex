@@ -11,6 +11,7 @@ def duration_filter(est_duration):
 class JobCategoryDispatcher(AbstractDispatcher):
     def __init__(self):
         self.predictor = None
+        self.duration_prediction_cache = {}
 
     def init(self, ts, workers):
         pass
@@ -20,7 +21,7 @@ class JobCategoryDispatcher(AbstractDispatcher):
         if self.predictor is None:
             estimate = job.limits / 2.0
         else:
-            estimate = self.predictor(job)
+            estimate = self.predict_duration(job)
 
         # get all workers marked as active
         active_workers = list(filter(lambda w: w.get_attribute("active"), workers))
@@ -38,3 +39,13 @@ class JobCategoryDispatcher(AbstractDispatcher):
 
     def set_predictor(self, predictor):
         self.predictor = predictor
+
+    def predict_duration(self, job):
+        if job in self.duration_prediction_cache:
+            return self.duration_prediction_cache[job]
+        else:
+            return self.predictor([job])[0]
+
+    def precompute_batch(self, jobs):
+        predictions = self.predictor(jobs)
+        self.duration_prediction_cache = dict(zip(jobs, predictions))

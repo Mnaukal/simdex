@@ -35,6 +35,8 @@ if __name__ == "__main__":
                         help="Path to .csv or .csv.gz file with log with jobs of reference solutions.")
     parser.add_argument("--progress", default=False, action="store_true",
                         help="If present, progress visualization is on.")
+    parser.add_argument("--inference_batch_size", type=int, default=5000,
+                        help="Perform the ML-based prediction for a batch of jobs at the same time to improve performance.")
     args = parser.parse_args()
 
     # initialize the system
@@ -52,14 +54,39 @@ if __name__ == "__main__":
     # read data and run the simulation
     limit = args.limit
     counter = 0
+    # use a job buffer for performance optimization
+    # this way, we can invoke the neural network for a batch of jobs
+    job_buffer = []
+
+    def simulate_jobs(jobs):
+        # allow the dispatcher to precompute the predictions
+        simulation.dispatcher.precompute_batch(jobs)
+        # then simulate the jobs sequentially
+        for job in jobs:
+            simulation.run(job)
+
+    # run one job to initialize simulation
+    job = next(reader)
+    simulation.run(job)
+    counter += 1
+
     for job in reader:
+        # check the limit
         if limit <= counter:
             break
-        simulation.run(job)
         counter += 1
+        # print progress
         if args.progress and counter % 1000 == 0:
             sys.stdout.write('.')
             sys.stdout.flush()
+
+        # simulate jobs (using the buffer)
+        job_buffer.append(job)
+        if len(job_buffer) >= args.inference_batch_size:
+            simulate_jobs(job_buffer)
+            job_buffer = []
+
+    simulate_jobs(job_buffer)
 
     print()
     simulation.run(None)  # end the simulation

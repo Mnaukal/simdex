@@ -5,7 +5,7 @@
 class AbstractMetricsCollector:
     """Base class for all metrics collectors.
 
-    The snapshot() is inoked before every MAPE-K loop invocation to capture workers state periodically.
+    The snapshot() is invoked before every MAPE-K loop invocation to capture workers state periodically.
     The job_finished() is invoked for every job after it is removed from the queue.
     """
 
@@ -28,22 +28,26 @@ class AbstractDispatcher:
     """Base class (interface declaration) for all dispatchers.
 
     Dispatcher is responsible for assigning jobs into worker queues.
-    Dispatcher itslef runs a fixed algorithm, but its behavior may be altered in MAPE-K loop.
+    Dispatcher itself runs a fixed algorithm, but its behavior may be altered in MAPE-K loop.
     """
 
     def init(self, ts, workers):
-        """Initialize the dispathcher before the first job."""
+        """Initialize the dispatcher before the first job."""
         pass
 
     def dispatch(self, job, workers):
         """Assign given job to one of the workers."""
         raise NotImplementedError
 
+    def precompute_batch(self, jobs):
+        """TODO: only for performance optimization (use the NN with a batch of jobs)"""
+        pass
+
 
 class AbstractSelfAdaptingStrategy:
     """Represents the controller used for self-adaptation of the system.
 
-    The main part is hidden into do_adapt() method that is used both for monitoring (collecing data)
+    The main part is hidden into do_adapt() method that is used both for monitoring (collecting data)
     and for adaptation (modifying the system configuration).
     """
 
@@ -58,7 +62,7 @@ class AbstractSelfAdaptingStrategy:
         (right before the job is dispatched).
         The ts holds simulation time, dispatcher and workers are the main objects of the simulation.
         The do_adapt() call may choose to modify dispatcher and workers settings to change simulation behavior.
-        The workers use generic atribute abstraction, dispatcher is implemented along with the SA strategy,
+        The workers use generic attribute abstraction, dispatcher is implemented along with the SA strategy,
         so the user may design whatever interface is necessary between these two modules.
         """
         raise NotImplementedError

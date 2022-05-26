@@ -5,9 +5,9 @@ from dataclasses import dataclass
 
 @dataclass
 class Job:
-    """Structure represenitng one job submitted to the system."""
+    """Structure representing one job submitted to the system."""
 
-    # fileds known when the job is created (spawned)
+    # fields known when the job is created (spawned)
     solution_id: int
     group_id: int  # corresponds to the lab group where the student gets the assignments
     tlgroup_id: int  # top-level group corresponds to the course the student attends
@@ -19,7 +19,7 @@ class Job:
     limits: float  # time limit for all tests (sum)
     cpu_time: bool  # True if CPU time was measured (more precise), False for wall time (includes IOs, page faults, ...)
 
-    # the following fiedls were filled after the job was evaluated
+    # the following fields were filled after the job was evaluated
     # (the dispatcher or MAPE-K loop should not read these fields when the job is being assigned)
     correctness: float  # how the solution was rated (on 0 - 1 scale, 1 being completely correct).
     compilation_ok: bool  # True if the solution passed compilation, False means that no test were actually executed
@@ -37,6 +37,9 @@ class Job:
             self.start_ts = prev_job.finish_ts  # job starts right after previous job ends
         self.finish_ts = self.start_ts + self.duration
 
+    def __hash__(self):
+        return super().__hash__()
+
 
 @dataclass
 class RefJob:
@@ -45,14 +48,14 @@ class RefJob:
     Reference solutions are used as additional data source for job duration estimation.
     """
 
-    # fileds known when the job is created (spawned)
+    # fields known when the job is created (spawned)
     solution_id: int
     exercise_id: int
     runtime_id: int  # corresponds to a programming language used for the solution
     worker_group_id: str  # identification of dedicated group of workers (possibly with specialized HW or SW installed)
     spawn_ts: float  # unix time stamp when the job was submitted by the user (and enqueued)
 
-    # the following fiedls were filled after the job was evaluated
+    # the following fields were filled after the job was evaluated
     # (the dispatcher or MAPE-K loop should not read these fields when the job is being assigned)
     correctness: float  # how the solution was rated (on 0 - 1 scale, 1 being completely correct).
     compilation_ok: bool  # True if the solution passed compilation, False means that no test were actually executed
@@ -65,7 +68,7 @@ class RefJob:
 
 
 def str_passthru(value):
-    """Simple string pass-through (just to simplify desing of the reader)."""
+    """Simple string pass-through (just to simplify design of the reader)."""
     return value
 
 
