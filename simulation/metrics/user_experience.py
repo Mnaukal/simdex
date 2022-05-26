@@ -3,7 +3,7 @@ from jobs import JobDurationIndex
 
 
 class UserExperienceMetricsCollector(AbstractMetricsCollector):
-    """User experience metrics attempts to asses user (dis)satisfaction with job delays.
+    """User experience metrics attempts to assess user (dis)satisfaction with job delays.
 
     In general jobs that are expected to be quick (interactive) should not be delayed too long.
     On the other hand, long jobs can be delayed since the used would not wait for them interactively.
@@ -19,7 +19,7 @@ class UserExperienceMetricsCollector(AbstractMetricsCollector):
         return job.duration if job.compilation_ok else job.limits
 
     def __init__(self, ref_jobs, thresholds=[1.0, 2.0]):
-        if (ref_jobs is None):
+        if ref_jobs is None:
             raise RuntimeError("User experience metrics require ref. jobs to be loaded.")
 
         # create an index structure for job duration estimation
@@ -55,6 +55,11 @@ class UserExperienceMetricsCollector(AbstractMetricsCollector):
     def get_total_jobs(self):
         return self.jobs_ontime + self.jobs_delayed + self.jobs_late
 
-    def print(self):
-        print("Total jobs: {}, on time: {}, delayed: {}, late: {}".format(
-            self.get_total_jobs(), self.jobs_ontime, self.jobs_delayed, self.jobs_late))
+    def percentage_of_total_jobs(self, jobs):
+        return 100 * jobs // self.get_total_jobs()
+
+    def print(self, **kwargs):
+        print(f"Total jobs: {self.get_total_jobs()}, "
+              f"on time: {self.jobs_ontime} ({self.percentage_of_total_jobs(self.jobs_ontime)}%), "
+              f"delayed: {self.jobs_delayed} ({self.percentage_of_total_jobs(self.jobs_delayed)}%), "
+              f"late: {self.jobs_late} ({self.percentage_of_total_jobs(self.jobs_late)}%)")

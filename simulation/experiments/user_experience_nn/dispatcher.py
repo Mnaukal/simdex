@@ -29,7 +29,7 @@ class JobCategoryDispatcher(AbstractDispatcher):
 
         # select workers where the job would fit (estimate duration is under worker limit)
         best_workers = list(filter(duration_filter(estimate), active_workers))
-        if len(best_workers) == 0:
+        if not best_workers:
             best_workers = active_workers  # fallback, if no worker passes the limit
 
         best_workers.sort(key=lambda w: w.jobs_count())
