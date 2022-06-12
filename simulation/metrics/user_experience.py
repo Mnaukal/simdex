@@ -18,7 +18,9 @@ class UserExperienceMetricsCollector(AbstractMetricsCollector):
 
         return job.duration if job.compilation_ok else job.limits
 
-    def __init__(self, ref_jobs, thresholds=[1.0, 2.0]):
+    def __init__(self, ref_jobs, thresholds=None):
+        if thresholds is None:
+            thresholds = [1.0, 2.0]
         if ref_jobs is None:
             raise RuntimeError("User experience metrics require ref. jobs to be loaded.")
 
@@ -55,11 +57,53 @@ class UserExperienceMetricsCollector(AbstractMetricsCollector):
     def get_total_jobs(self):
         return self.jobs_ontime + self.jobs_delayed + self.jobs_late
 
-    def percentage_of_total_jobs(self, jobs):
-        return 100 * jobs // self.get_total_jobs()
+    def percentage_of_total_jobs(self, jobs, total=None):
+        if total is None:
+            total = self.get_total_jobs()
+        return 100 * jobs // total
 
     def print(self, **kwargs):
         print(f"Total jobs: {self.get_total_jobs()}, "
               f"on time: {self.jobs_ontime} ({self.percentage_of_total_jobs(self.jobs_ontime)}%), "
               f"delayed: {self.jobs_delayed} ({self.percentage_of_total_jobs(self.jobs_delayed)}%), "
               f"late: {self.jobs_late} ({self.percentage_of_total_jobs(self.jobs_late)}%)")
+
+
+class UserExperienceMetricsCollectorWithHistory(UserExperienceMetricsCollector):
+
+    def __init__(self, ref_jobs, thresholds=None, history_step=10000):
+        super().__init__(ref_jobs, thresholds)
+        self.history_step = history_step
+        # (total_jobs, ontime, delayed, late)
+        self.history = []
+
+    def job_finished(self, job):
+        super().job_finished(job)
+        if self.get_total_jobs() % self.history_step == 0:
+            self.log_history_step()
+
+    def log_history_step(self):
+        total = self.get_total_jobs()
+        self.history.append((total, self.jobs_ontime, self.jobs_delayed, self.jobs_late))
+
+    def print_history(self):
+        print(" TOTAL,  ONTIME   %, DELAYED   %,    LATE   %, DIFF_ON   %, DIFF_DE   %, DIFF_LA   %,")
+        last = (0, 0, 0, 0)
+        for row in self.history:
+            (total, ontime, delayed, late) = row
+            total_diff = total - last[0]
+            ontime_diff = ontime - last[1]
+            delayed_diff = delayed - last[2]
+            late_diff = late - last[3]
+            print(f"{total:>6}, "
+                  f"{ontime:>6}, {self.percentage_of_total_jobs(ontime, total):>3}, "
+                  f"{delayed:>6}, {self.percentage_of_total_jobs(delayed, total):>3}, "
+                  f"{late:>6}, {self.percentage_of_total_jobs(late, total):>3}, "
+                  f"{ontime_diff:>6}, {self.percentage_of_total_jobs(ontime_diff, total_diff):>3}, "
+                  f"{delayed_diff:>6}, {self.percentage_of_total_jobs(delayed_diff, total_diff):>3}, "
+                  f"{late_diff:>6}, {self.percentage_of_total_jobs(late_diff, total_diff):>3}")
+            last = row
+
+    def print(self, **kwargs):
+        super().print(**kwargs)
+        self.print_history()
