@@ -2,7 +2,7 @@ from workers import WorkerQueue
 from interfaces import create_component
 
 
-def _create_instance(config, ref_jobs):
+def _create_instance(config, ref_jobs, hash_converters):
     """Helper function that creates instance of a component from configuration."""
     if isinstance(config, dict):
         # Basic type checks
@@ -10,10 +10,17 @@ def _create_instance(config, ref_jobs):
             raise RuntimeError("Component configuration descriptor must have 'class' and 'args' properties.")
 
         # argument "@@ref_jobs" is replaced with ref_jobs list (special injection)
+        def inject(val):
+            if val == "@@ref_jobs":
+                return ref_jobs
+            elif val == "@@hash_converters":
+                return hash_converters
+            else:
+                return val
         if isinstance(config["args"], dict):
-            args = {key: ref_jobs if val == "@@ref_jobs" else val for key, val in config["args"].items()}
+            args = {key: inject(val) for key, val in config["args"].items()}
         elif isinstance(config["args"], list):
-            args = [ref_jobs if arg == "@@ref_jobs" else arg for arg in config["args"]]
+            args = [inject(arg) for arg in config["args"]]
         else:
             raise RuntimeError("Invalid component constructor args given in configuration descriptor.")
 
@@ -25,16 +32,16 @@ def _create_instance(config, ref_jobs):
 class Simulation:
     """Main simulation class. Wraps the algorithm and acts as component container."""
 
-    def __init__(self, configuration, ref_jobs=None):
+    def __init__(self, configuration, ref_jobs=None, hash_converters=None):
         # load parameters from configuration and instantiate necessary components
         self.metrics = []
         if "metrics" in configuration:
             for metric in configuration["metrics"]:
-                self.metrics.append(_create_instance(metric, ref_jobs))
+                self.metrics.append(_create_instance(metric, ref_jobs, hash_converters))
 
-        self.dispatcher = _create_instance(configuration["dispatcher"], ref_jobs)
+        self.dispatcher = _create_instance(configuration["dispatcher"], ref_jobs, hash_converters)
         if "sa_strategy" in configuration:
-            self.sa_strategy = _create_instance(configuration["sa_strategy"], ref_jobs)
+            self.sa_strategy = _create_instance(configuration["sa_strategy"], ref_jobs, hash_converters)
         else:
             self.sa_strategy = None  # strategy can be empty (i.e., no MAPE-K) for baseline ref. measurements
 

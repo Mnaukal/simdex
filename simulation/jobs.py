@@ -157,12 +157,14 @@ class ReaderBase:
 class JobReader(ReaderBase):
     def __init__(self, delimiter=';', converters=None):
         super().__init__(delimiter)
+        if converters is None:
+            converters = {}
         self.converters = {
-            "solution_id": HashConverter(),
-            "group_id": HashConverter(),
-            "tlgroup_id": HashConverter(),
-            "exercise_id": HashConverter(),
-            "runtime_id": HashConverter(),
+            "solution_id": converters.get("solution_id", HashConverter()),
+            "group_id": converters.get("group_id", HashConverter()),
+            "tlgroup_id": converters.get("tlgroup_id", HashConverter()),
+            "exercise_id": converters.get("exercise_id", HashConverter()),
+            "runtime_id": converters.get("runtime_id", HashConverter()),
             "worker_group_id": str_passthru,
             "user_id": HashConverter(),
             "spawn_ts": FloatConverter(),
@@ -172,8 +174,6 @@ class JobReader(ReaderBase):
             "compilation_ok": bool_converter,
             "duration": FloatConverter(),
         }
-        if converters:
-            self.converters.update(converters)
 
     def __next__(self):
         converted = super().__next__()
@@ -183,18 +183,18 @@ class JobReader(ReaderBase):
 class RefJobReader(ReaderBase):
     def __init__(self, delimiter=';', converters=None):
         super().__init__(delimiter)
+        if converters is None:
+            converters = {}
         self.converters = {
-            "solution_id": HashConverter(),
-            "exercise_id": HashConverter(),
-            "runtime_id": HashConverter(),
+            "solution_id": converters.get("solution_id", HashConverter()),
+            "exercise_id": converters.get("exercise_id", HashConverter()),
+            "runtime_id": converters.get("runtime_id", HashConverter()),
             "worker_group_id": str_passthru,
             "spawn_ts": FloatConverter(),
             "correctness": FloatConverter(),
             "compilation_ok": bool_converter,
             "duration": FloatConverter(),
         }
-        if converters:
-            self.converters.update(converters)
 
     def __next__(self):
         converted = super().__next__()

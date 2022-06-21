@@ -1,0 +1,48 @@
+# Scenario where user experience based on job latency is the top criterium.
+# Short jobs needs to be evaluated almost interactively, long jobs may be delayed much longer.
+# The objective is achieved by imposing limits on queues, only jobs that are expected to
+# take no more than given limit are allowed in (all queues remain active the whole time).
+# The key part of the scenario is the duration estimation algorithm used by dispatcher.
+
+# This configuration uses dispatcher and SA strategy based on neural-network regression estimator.
+# The NN is trained in batches of incoming jobs as the simulation progresses.
+
+# Workers could be either a number or a list that explicitly states a collection of attributes
+# If only a number is given, the workers are initialized with no attributes at the beginning.
+workers:
+  - active: true
+  - active: true
+    limit: 30.0
+  - active: true
+    limit: 30.0
+  - active: true
+    limit: 30.0
+
+# dispatcher component: either a string (fully qualified class name) or a collection with { class, args }
+# where class is fully qualified class name and args is list or dict holding constructor arguments
+dispatcher: experiments.user_experience_nn.dispatcher.JobCategoryDispatcher
+
+# self-adapting strategy component (same format as dispatcher)
+sa_strategy:
+  class: experiments.user_experience_nn.sa_strategy_embedding.CategorySelfAdaptingStrategy
+  args:
+    layers_widths: [ 512, 256 ]  # each value represents a width of one hidden layer
+    batch_size: 5000
+    batch_epochs: 5
+    ref_jobs: "@@ref_jobs"
+    hash_converters: "@@hash_converters"
+    embedding_training_data: "../data/release01-2021-12-29/exercise_tlgroup.csv"
+    embedding_dim: 100
+    embedding_batch_size: 5000
+    embedding_batch_epochs: 20
+
+
+period: 60  # in seconds, how often a sa strategy (MAPE-K loop) is invoked
+
+# list of metric components (each one is in the same format as dispatcher)
+metrics:
+  - metrics.default.JobDelayMetricsCollector
+  - class: metrics.user_experience.UserExperienceMetricsCollectorWithHistory
+    args:
+      - "@@ref_jobs"
+      - [ 1.5, 3.0 ]  # thresholds

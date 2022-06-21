@@ -41,15 +41,17 @@ if __name__ == "__main__":
 
     # initialize the system
     configuration = get_configuration(args.config)
-    common_reader_converters = {
+    hash_converters = {
         "solution_id": HashConverter(),
+        "group_id": HashConverter(),
+        "tlgroup_id": HashConverter(),
         "exercise_id": HashConverter(),
         "runtime_id": HashConverter(),
     }
-    ref_jobs = load_reference_jobs(args.refs, common_reader_converters) if args.refs else None
-    simulation = Simulation(configuration, ref_jobs)
+    ref_jobs = load_reference_jobs(args.refs, hash_converters) if args.refs else None
+    simulation = Simulation(configuration, ref_jobs, hash_converters)
 
-    reader = JobReader(converters=common_reader_converters)
+    reader = JobReader(converters=hash_converters)
     reader.open(args.input_file)
 
     if args.progress:
