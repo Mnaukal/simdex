@@ -155,7 +155,7 @@ class ReaderBase:
 
 
 class JobReader(ReaderBase):
-    def __init__(self, delimiter=';'):
+    def __init__(self, delimiter=';', converters=None):
         super().__init__(delimiter)
         self.converters = {
             "solution_id": HashConverter(),
@@ -172,6 +172,8 @@ class JobReader(ReaderBase):
             "compilation_ok": bool_converter,
             "duration": FloatConverter(),
         }
+        if converters:
+            self.converters.update(converters)
 
     def __next__(self):
         converted = super().__next__()
@@ -179,7 +181,7 @@ class JobReader(ReaderBase):
 
 
 class RefJobReader(ReaderBase):
-    def __init__(self, delimiter=';'):
+    def __init__(self, delimiter=';', converters=None):
         super().__init__(delimiter)
         self.converters = {
             "solution_id": HashConverter(),
@@ -191,6 +193,8 @@ class RefJobReader(ReaderBase):
             "compilation_ok": bool_converter,
             "duration": FloatConverter(),
         }
+        if converters:
+            self.converters.update(converters)
 
     def __next__(self):
         converted = super().__next__()

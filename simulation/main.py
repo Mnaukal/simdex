@@ -3,7 +3,7 @@
 import sys
 import argparse
 import ruamel.yaml as yaml
-from jobs import JobReader, RefJobReader
+from jobs import JobReader, RefJobReader, HashConverter
 from simulation import Simulation
 
 
@@ -17,8 +17,8 @@ def get_configuration(config_file):
             exit()
 
 
-def load_reference_jobs(path):
-    reader = RefJobReader()
+def load_reference_jobs(path, converters):
+    reader = RefJobReader(converters=converters)
     reader.open(path)
     jobs = [job for job in reader]
     reader.close()
@@ -41,10 +41,15 @@ if __name__ == "__main__":
 
     # initialize the system
     configuration = get_configuration(args.config)
-    ref_jobs = load_reference_jobs(args.refs) if (args.refs) else None
+    common_reader_converters = {
+        "solution_id": HashConverter(),
+        "exercise_id": HashConverter(),
+        "runtime_id": HashConverter(),
+    }
+    ref_jobs = load_reference_jobs(args.refs, common_reader_converters) if args.refs else None
     simulation = Simulation(configuration, ref_jobs)
 
-    reader = JobReader()
+    reader = JobReader(converters=common_reader_converters)
     reader.open(args.input_file)
 
     if args.progress:
