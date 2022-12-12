@@ -60,6 +60,8 @@ class UserExperienceMetricsCollector(AbstractMetricsCollector):
     def percentage_of_total_jobs(self, jobs, total=None):
         if total is None:
             total = self.get_total_jobs()
+        if total == 0:
+            return 0
         return 100 * jobs // total
 
     def print(self, **kwargs):
@@ -71,7 +73,7 @@ class UserExperienceMetricsCollector(AbstractMetricsCollector):
 
 class UserExperienceMetricsCollectorWithHistory(UserExperienceMetricsCollector):
 
-    def __init__(self, ref_jobs, thresholds=None, history_step=10000):
+    def __init__(self, ref_jobs, thresholds=None, history_step=None):
         super().__init__(ref_jobs, thresholds)
         self.history_step = history_step
         # (total_jobs, ontime, delayed, late)
@@ -79,7 +81,7 @@ class UserExperienceMetricsCollectorWithHistory(UserExperienceMetricsCollector):
 
     def job_finished(self, job):
         super().job_finished(job)
-        if self.get_total_jobs() % self.history_step == 0:
+        if self.history_step is not None and self.get_total_jobs() % self.history_step == 0:
             self.log_history_step()
 
     def log_history_step(self):

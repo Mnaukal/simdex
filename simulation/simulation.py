@@ -6,7 +6,7 @@ def _create_instance(config, ref_jobs, hash_converters):
     """Helper function that creates instance of a component from configuration."""
     if isinstance(config, dict):
         # Basic type checks
-        if ("class" not in config or "args" not in config):
+        if "class" not in config or "args" not in config:
             raise RuntimeError("Component configuration descriptor must have 'class' and 'args' properties.")
 
         # argument "@@ref_jobs" is replaced with ref_jobs list (special injection)
@@ -41,7 +41,7 @@ class Simulation:
 
         self.dispatcher = _create_instance(configuration["dispatcher"], ref_jobs, hash_converters)
         if "sa_strategy" in configuration:
-            self.sa_strategy = _create_instance(configuration["sa_strategy"], ref_jobs, hash_converters)
+            self.sa_strategy = _create_instance(configuration["sa_strategy"], ref_jobs, hash_converters
         else:
             self.sa_strategy = None  # strategy can be empty (i.e., no MAPE-K) for baseline ref. measurements
 
