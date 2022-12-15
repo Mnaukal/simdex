@@ -1,13 +1,13 @@
 import collections
 import os
+
+from experiments.user_experience_rl.replay_buffer import ReplayBuffer
+
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
 os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # Disable GPU in TF. The models are small, so it is actually faster to use the CPU.
 import tensorflow as tf
 import numpy as np
 from interfaces import AbstractSelfAdaptingStrategy
-
-
-GAMMA = 0.99
 
 
 class Network:
@@ -26,7 +26,7 @@ class Network:
         tlgroup_id = tf.one_hot(tlgroup_id, 95, name="tlgroup_id")
 
         categorical_inputs = tf.keras.layers.Concatenate()([exercise_id, runtime_id, tlgroup_id])
-        categorical_inputs = tf.keras.layers.Dense(50, activation=tf.nn.relu)(categorical_inputs)
+        categorical_inputs = tf.keras.layers.Dense(70, activation=tf.nn.relu)(categorical_inputs)
 
         inputs = tf.keras.layers.Concatenate()([categorical_inputs, input_layer[:, 3:]])
 
@@ -70,34 +70,23 @@ class CategorySelfAdaptingStrategy(AbstractSelfAdaptingStrategy):
     """TODO:
     """
 
-    def __init__(self, worker_count, layers_widths=[50], batch_size=64, ref_jobs=None):
+    def __init__(self, worker_count, layers_widths=[50], batch_size=64, replay_buffer_size=50_000, gamma=0.99):
         tf.keras.utils.set_random_seed(42)
         tf.config.threading.set_inter_op_parallelism_threads(8)
         tf.config.threading.set_intra_op_parallelism_threads(8)
         # tf.config.set_visible_devices([], 'GPU')
 
-        self.ref_jobs = ref_jobs[:] if ref_jobs else None
-
         self.network = Network(worker_count, layers_widths)
         self.network.summary()
         self.target_network = Network(worker_count, layers_widths)
         self.batch_size = batch_size
-        self.replay_buffer = collections.deque(maxlen=50_000)
-
-    def _advance_ts(self, ts):
-        return  # ignore ref_jobs for now
-        while len(self.ref_jobs) > 0 and self.ref_jobs[-1].spawn_ts + self.ref_jobs[-1].duration <= ts:
-            job = self.ref_jobs.pop()
-            if job.compilation_ok:
-                self.buffer.append(job)
+        self.replay_buffer = ReplayBuffer(replay_buffer_size)
+        self.gamma = gamma
 
     def _train_batch(self):
         """Take the job buffer and use it as batch for training."""
         if len(self.replay_buffer) > self.batch_size:
-            transitions = [
-                self.replay_buffer[i]
-                for i in np.random.choice(len(self.replay_buffer), size=self.batch_size, replace=False)
-            ]
+            transitions = self.replay_buffer.sample(self.batch_size, np.random)
 
             states = np.array([t.state for t in transitions])
             q_values = np.array(self.network.predict(states))
@@ -105,7 +94,7 @@ class CategorySelfAdaptingStrategy(AbstractSelfAdaptingStrategy):
             q_next = np.array(self.target_network.predict(next_states))
 
             for i, t in enumerate(transitions):
-                q_values[i, t.action] = t.reward + GAMMA * np.max(q_next[i, :])
+                q_values[i, t.action] = t.reward + self.gamma * np.max(q_next[i, :])
 
             self.network.train(states, q_values)
 
@@ -113,13 +102,10 @@ class CategorySelfAdaptingStrategy(AbstractSelfAdaptingStrategy):
         dispatcher.q_network = self.network
         dispatcher.replay_buffer = self.replay_buffer
 
-        self._advance_ts(ts)
-        self._train_batch()
-
     def do_adapt(self, ts, dispatcher, workers, job=None):
-        self._advance_ts(ts)
         if job and job.compilation_ok:
-            # for _ in range(25):  # TODO
             self._train_batch()
         else:
+            # for _ in range(10):
+            #     self._train_batch()
             self.target_network.copy_weights_from(self.network)

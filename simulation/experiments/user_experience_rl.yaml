@@ -17,15 +17,21 @@ workers:
 
 # dispatcher component: either a string (fully qualified class name) or a collection with { class, args }
 # where class is fully qualified class name and args is list or dict holding constructor arguments
-dispatcher: experiments.user_experience_rl.dispatcher.JobCategoryDispatcher
+dispatcher:
+  class: experiments.user_experience_rl.dispatcher.JobCategoryDispatcher
+  args:
+    epsilon_initial: 0.3
+    epsilon_final: 0.01
+    epsilon_final_after_jobs: 10_000
 
 # self-adapting strategy component (same format as dispatcher)
 sa_strategy:
   class: experiments.user_experience_rl.sa_strategy.CategorySelfAdaptingStrategy
   args:
     worker_count: 4
-    layers_widths: [50]  # each value represents a width of one hidden layer
-    ref_jobs: "@@ref_jobs"
+    layers_widths: [70]  # each value represents a width of one hidden layer
+    replay_buffer_size: 100_000
+    gamma: 0.99
 
 period: 86400  # in seconds, how often a sa strategy (MAPE-K loop) is invoked
 
@@ -34,6 +40,7 @@ metrics:
   - metrics.default.JobDelayMetricsCollector
   - class: metrics.user_experience.UserExperienceMetricsCollectorWithHistory
     args:
-      - "@@ref_jobs"
-      - [ 1.5, 3.0 ]  # thresholds
-      - 10000  # history step
+      ref_jobs: "@@ref_jobs"
+      thresholds: [ 1.5, 3.0 ]
+      history_step: 10_000
+      print_progress: True

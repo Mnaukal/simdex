@@ -5,32 +5,35 @@ from interfaces import AbstractDispatcher
 from experiments.user_experience_rl.sa_strategy import Transition
 
 
-EPSILON = 0.2
-
-
 class JobCategoryDispatcher(AbstractDispatcher):
-    def __init__(self):
+    def __init__(self, epsilon_initial, epsilon_final, epsilon_final_after_jobs):
         self.q_network = None
         self.replay_buffer = None
+        self.epsilon_initial = epsilon_initial
+        self.epsilon_final = epsilon_final
+        self.epsilon_final_after_jobs = epsilon_final_after_jobs
+        self.dispatched_jobs = 0
 
     def init(self, ts, workers):
         pass
 
-    def _get_state(self, job, workers):
+    @staticmethod
+    def _get_state(job, workers):
         return [
             job.exercise_id,
             job.runtime_id,
             job.tlgroup_id,
-            job.limits,
+            np.log2(max(job.limits, 1)),
             *[worker.jobs_count() for worker in workers],
-            *[sum(map(lambda j: j.limits, worker.jobs)) for worker in workers]
+            *[np.log2(max(sum(map(lambda j: j.limits, worker.jobs)), 1)) for worker in workers]
         ]
 
     def dispatch(self, job, workers):
         state = self._get_state(job, workers)
         q_values = self.q_network.predict(np.array([state]))[0]
 
-        if np.random.uniform() >= EPSILON:
+        epsilon = np.interp(self.dispatched_jobs, [0, self.epsilon_final_after_jobs], [self.epsilon_initial, self.epsilon_final])
+        if np.random.uniform() >= epsilon:
             action = np.argmax(q_values)  # greedy
         else:
             action = np.random.randint(len(workers))
@@ -38,10 +41,14 @@ class JobCategoryDispatcher(AbstractDispatcher):
         target = workers[action]
 
         target.enqueue(job)
+        self.dispatched_jobs += 1
 
         # the job.start_ts field is now computed by the simulation
         waiting = job.start_ts - job.spawn_ts
-        reward = -waiting
+        if waiting < 10:
+            reward = 0
+        else:
+            reward = -waiting / max(job.limits, 1)
 
         next_state = self._get_state(job, workers)  # TODO: what is next state? We don't know which job will come next
 

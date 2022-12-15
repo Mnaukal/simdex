@@ -41,7 +41,7 @@ class Simulation:
 
         self.dispatcher = _create_instance(configuration["dispatcher"], ref_jobs, hash_converters)
         if "sa_strategy" in configuration:
-            self.sa_strategy = _create_instance(configuration["sa_strategy"], ref_jobs, hash_converters
+            self.sa_strategy = _create_instance(configuration["sa_strategy"], ref_jobs, hash_converters)
         else:
             self.sa_strategy = None  # strategy can be empty (i.e., no MAPE-K) for baseline ref. measurements
 

@@ -55,7 +55,7 @@ if __name__ == "__main__":
     reader.open(args.input_file)
 
     if args.progress:
-        sys.stdout.write("Simulation started ")
+        sys.stdout.write("Simulation started\n")
         sys.stdout.flush()
 
     # read data and run the simulation
@@ -83,8 +83,10 @@ if __name__ == "__main__":
             break
         counter += 1
         # print progress
-        if args.progress and counter % 1000 == 0:
+        if args.progress and counter % 1_000 == 0:
             sys.stdout.write('.')
+            if counter % 50_000 == 0:
+                sys.stdout.write('\n')
             sys.stdout.flush()
 
         # simulate jobs (using the buffer)
