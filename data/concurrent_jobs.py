@@ -26,14 +26,28 @@ filtered_df = pd.DataFrame(columns=columns)
 
 running_job_finishes = []
 
+previous_job_added = False
+
 for index, row in jobs_df.iterrows():
     running_job_finishes = list(filter(lambda f: f > row['spawn_ts'], running_job_finishes))
+
     if len(running_job_finishes) > 0:
+        if not previous_job_added:
+            new_row = {}
+            for column in columns:
+                new_row[column] = previous_job[column]
+            filtered_df = filtered_df.append(new_row, ignore_index=True)
+
         new_row = {}
         for column in columns:
             new_row[column] = row[column]
         filtered_df = filtered_df.append(new_row, ignore_index=True)
+        previous_job_added = True    
+    else:
+        previous_job_added = False
+
     running_job_finishes.append(row['finish_ts'])
+    previous_job = row
 
 
 filtered_df.to_csv('filtered_data.csv', index=False, sep=';')
