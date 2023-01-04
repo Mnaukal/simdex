@@ -3,7 +3,7 @@ import gzip
 from dataclasses import dataclass
 
 
-@dataclass
+@dataclass(unsafe_hash=True)
 class Job:
     """Structure representing one job submitted to the system."""
 
@@ -37,11 +37,8 @@ class Job:
             self.start_ts = prev_job.finish_ts  # job starts right after previous job ends
         self.finish_ts = self.start_ts + self.duration
 
-    def __hash__(self):
-        return super().__hash__()
 
-
-@dataclass
+@dataclass(unsafe_hash=True)
 class RefJob:
     """Structure representing a reference solution job.
 

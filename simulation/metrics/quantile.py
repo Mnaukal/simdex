@@ -6,7 +6,7 @@ class JobDelayQuantilesCollector(AbstractMetricsCollector):
 
     def __init__(self, quantiles=None):
         if quantiles is None:
-            self.quantiles = [0.5, 0.9, 0.95, 0.98, 0.99, 0.995]
+            self.quantiles = [0.5, 0.9, 0.95, 0.98, 0.99, 0.995, 0.999]
         self.job_delays = []
         self.jobs = 0
 
@@ -16,10 +16,10 @@ class JobDelayQuantilesCollector(AbstractMetricsCollector):
         self.jobs += 1
 
     def print(self):
-        print("Total jobs: " + str(self.get_jobs()) + ", delay quantiles: ", end="")
+        q_width = max([len(str(q)) for q in self.quantiles])
+        print("Delay quantiles:")
         for q, r in zip(self.quantiles, self.compute_quantiles()):
-            print(f"{q}: {r:.2f} | ", end="")
-        print()
+            print(f"    {q:<{q_width}}: {r:.2f}")
 
     def get_jobs(self):
         return self.jobs

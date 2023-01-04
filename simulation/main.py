@@ -2,6 +2,8 @@
 
 import sys
 import argparse
+from datetime import datetime
+
 import ruamel.yaml as yaml
 from jobs import JobReader, RefJobReader, HashConverter
 from simulation import Simulation
@@ -35,7 +37,7 @@ if __name__ == "__main__":
                         help="Path to .csv or .csv.gz file with log with jobs of reference solutions.")
     parser.add_argument("--progress", default=False, action="store_true",
                         help="If present, progress visualization is on.")
-    parser.add_argument("--inference_batch_size", type=int, default=5000,
+    parser.add_argument("--inference_batch_size", type=int, default=500,
                         help="Perform the ML-based prediction for a batch of jobs at the same time to improve performance.")
     args = parser.parse_args()
 
@@ -54,8 +56,9 @@ if __name__ == "__main__":
     reader = JobReader(converters=hash_converters)
     reader.open(args.input_file)
 
+    simulation_start_time = datetime.now()
     if args.progress:
-        sys.stdout.write("Simulation started\n")
+        sys.stdout.write(f"Simulation started {simulation_start_time}\n")
         sys.stdout.flush()
 
     # read data and run the simulation
@@ -100,6 +103,13 @@ if __name__ == "__main__":
     print()
     simulation.run(None)  # end the simulation
     reader.close()
+
+    simulation_end_time = datetime.now()
+    if args.progress:
+        sys.stdout.write(f"Simulation finished: {simulation_end_time}\n")
+        sys.stdout.flush()
+    sys.stdout.write(f"Simulation duration: {simulation_end_time - simulation_start_time}\n")
+    sys.stdout.flush()
 
     # print out measured statistics
     for metric in simulation.metrics:

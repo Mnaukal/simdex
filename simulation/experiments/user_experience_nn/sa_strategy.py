@@ -58,12 +58,17 @@ class CategorySelfAdaptingStrategy(AbstractSelfAdaptingStrategy):
         self.layers_widths = layers_widths
         self.batch_size = batch_size
         self.batch_epochs = batch_epochs
-        self.ref_jobs = ref_jobs[:] if ref_jobs else None
+        if ref_jobs:
+            self.ref_jobs = ref_jobs[:]
+            self.ref_jobs.reverse()
+        else:
+            self.ref_jobs = None
+
         self.buffer = []
         self.model = None
 
     def _advance_ts(self, ts):
-        while len(self.ref_jobs) > 0 and self.ref_jobs[-1].spawn_ts + self.ref_jobs[-1].duration <= ts:
+        while self.ref_jobs and self.ref_jobs[-1].spawn_ts + self.ref_jobs[-1].duration <= ts:
             job = self.ref_jobs.pop()
             if job.compilation_ok:
                 self.buffer.append(job)

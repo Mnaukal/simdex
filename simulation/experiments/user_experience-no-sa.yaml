@@ -25,6 +25,7 @@ dispatcher: experiments.user_experience.dispatcher.JobCategoryDispatcher
 # list of metric components (each one is in the same format as dispatcher)
 metrics:
   - metrics.default.JobDelayMetricsCollector
+  - metrics.quantile.JobDelayQuantilesCollector
   - class: metrics.user_experience.UserExperienceMetricsCollectorWithHistory
     args:
       - "@@ref_jobs"
