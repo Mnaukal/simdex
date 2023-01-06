@@ -1,6 +1,7 @@
 import collections
 import os
 
+from constants import TL_GROUP_COUNT, EXERCISE_ID_COUNT, RUNTIME_ID_COUNT
 from experiments.user_experience_rl.replay_buffer import ReplayBuffer
 from jobs import ReaderBase
 
@@ -110,7 +111,7 @@ class CategorySelfAdaptingStrategy(AbstractSelfAdaptingStrategy):
 
     def _construct_embeddings(self):
         exercise_id = tf.keras.Input(shape=(1,), dtype='int32')
-        embedding_layer = tf.keras.layers.Embedding(input_dim=1876, input_length=1, output_dim=self.embedding_dim)
+        embedding_layer = tf.keras.layers.Embedding(input_dim=EXERCISE_ID_COUNT + 1, input_length=1, output_dim=self.embedding_dim)
         flatten_layer = tf.keras.layers.Flatten()
 
         def embedding(x):
@@ -118,8 +119,8 @@ class CategorySelfAdaptingStrategy(AbstractSelfAdaptingStrategy):
 
         embedded = embedding(exercise_id)
 
-        output_exercise = tf.keras.layers.Dense(1876, activation=tf.nn.softmax, name="exercise_id")(embedded)
-        output_tlgroup = tf.keras.layers.Dense(96, activation=tf.nn.softmax, name="tlgroup_id")(embedded)
+        output_exercise = tf.keras.layers.Dense(EXERCISE_ID_COUNT + 1, activation=tf.nn.softmax, name="exercise_id")(embedded)
+        output_tlgroup = tf.keras.layers.Dense(TL_GROUP_COUNT + 1, activation=tf.nn.softmax, name="tlgroup_id")(embedded)
 
         self.embedding_model = tf.keras.Model(inputs=exercise_id, outputs=[output_exercise, output_tlgroup])
         self.embedding_model.compile(optimizer=tf.optimizers.Adam(), loss=[
@@ -140,7 +141,7 @@ class CategorySelfAdaptingStrategy(AbstractSelfAdaptingStrategy):
             embedding(all_inputs[:, 0])
         ]
 
-        domain_sizes = [20, 95]  # runtime_id, tlgroup_id
+        domain_sizes = [RUNTIME_ID_COUNT, TL_GROUP_COUNT]
         for idx in range(0, 2):
             encoding_layer = self._get_category_encoding_layer(domain_sizes[idx])
             encoded_col = encoding_layer(all_inputs[:, idx + 1])

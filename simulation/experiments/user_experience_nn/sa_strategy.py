@@ -3,6 +3,8 @@ os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by d
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # Disable GPU in TF. The models are small, so it is actually faster to use the CPU.
 import tensorflow as tf
 import numpy as np
+
+from constants import RUNTIME_ID_COUNT, EXERCISE_ID_COUNT
 from interfaces import AbstractSelfAdaptingStrategy
 
 
@@ -13,7 +15,7 @@ def _get_category_encoding_layer(size):
 def _prepare_inputs():
     all_inputs = tf.keras.Input(shape=(2,), dtype='int32')
     encoded_features = []
-    domain_sizes = [1875, 20]
+    domain_sizes = [EXERCISE_ID_COUNT, RUNTIME_ID_COUNT]
     for idx in range(0, 2):
         encoding_layer = _get_category_encoding_layer(domain_sizes[idx])
         encoded_col = encoding_layer(all_inputs[:, idx])

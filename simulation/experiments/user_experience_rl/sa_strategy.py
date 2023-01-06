@@ -1,6 +1,7 @@
 import collections
 import os
 
+from constants import TL_GROUP_COUNT, EXERCISE_ID_COUNT, RUNTIME_ID_COUNT
 from experiments.user_experience_rl.replay_buffer import ReplayBuffer
 
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
@@ -21,9 +22,9 @@ class Network:
         tlgroup_id = tf.cast(input_layer[:, 2], tf.int32)
 
         # one-hot encoding
-        exercise_id = tf.one_hot(exercise_id, 1875, name="exercise_id")
-        runtime_id = tf.one_hot(runtime_id, 20, name="runtime_id")
-        tlgroup_id = tf.one_hot(tlgroup_id, 95, name="tlgroup_id")
+        exercise_id = tf.one_hot(exercise_id, EXERCISE_ID_COUNT, name="exercise_id")
+        runtime_id = tf.one_hot(runtime_id, RUNTIME_ID_COUNT, name="runtime_id")
+        tlgroup_id = tf.one_hot(tlgroup_id, TL_GROUP_COUNT, name="tlgroup_id")
 
         categorical_inputs = tf.keras.layers.Concatenate()([exercise_id, runtime_id, tlgroup_id])
         categorical_inputs = tf.keras.layers.Dense(70, activation=tf.nn.relu)(categorical_inputs)

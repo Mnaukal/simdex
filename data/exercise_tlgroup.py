@@ -13,6 +13,7 @@ class Reader(ReaderBase):
             "exercise_id": str_passthru,
         }
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("input_file", type=str, help="Path to the input .csv or .csv.gz file with jobs log.")

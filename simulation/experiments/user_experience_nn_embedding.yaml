@@ -31,10 +31,10 @@ sa_strategy:
     batch_epochs: 5
     ref_jobs: "@@ref_jobs"
     hash_converters: "@@hash_converters"
-    embedding_training_data: "../data/release01-2021-12-29/exercise_tlgroup.csv"
+    embedding_training_data: "../data/release02-2023-01-04/exercise_tlgroup.csv"
     embedding_dim: 100
     embedding_batch_size: 5000
-    embedding_batch_epochs: 30
+    embedding_batch_epochs: 50
 
 
 period: 60  # in seconds, how often a sa strategy (MAPE-K loop) is invoked
