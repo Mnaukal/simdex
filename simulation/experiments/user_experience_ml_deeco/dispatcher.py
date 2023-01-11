@@ -1,3 +1,6 @@
+import os
+os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
+
 from ml_deeco.estimators import ValueEstimate, CategoricalFeature, TimeFeature
 from ml_deeco.simulation import Component
 
@@ -59,6 +62,12 @@ class JobCategoryDispatcher(AbstractDispatcher, Component):
         target.enqueue(job)
 
         # We also want to collect data for training of the estimate
-        JobCategoryDispatcher.jobDurationEstimate.collectInputs(self, job)
+        self.collect_job_for_training(job)
+
+    def collect_job_for_training(self, job):
+        type(self).jobDurationEstimate.collectInputs(self, job)
         # The following line would be called when the job is finished. As we are in a simulation, the value is already known.
-        JobCategoryDispatcher.jobDurationEstimate.collectTargets(self, job)
+        type(self).jobDurationEstimate.collectTargets(self, job)
+
+    def precompute_batch(self, jobs):
+        type(self).jobDurationEstimate.cacheEstimates(self, jobs)

@@ -41,4 +41,5 @@ metrics:
     args:
       - "@@ref_jobs"
       - [ 1.5, 3.0 ]  # thresholds
-      - 10000  # history step
+#      - 10000  # history step
+      - 100000  # history step

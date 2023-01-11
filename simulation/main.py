@@ -98,7 +98,8 @@ if __name__ == "__main__":
             simulate_jobs(job_buffer)
             job_buffer = []
 
-    simulate_jobs(job_buffer)
+    if job_buffer:
+        simulate_jobs(job_buffer)
 
     print()
     simulation.run(None)  # end the simulation

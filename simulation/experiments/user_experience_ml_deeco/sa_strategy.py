@@ -43,6 +43,7 @@ class CategorySelfAdaptingStrategy(AbstractSelfAdaptingStrategy, Experiment):
             },
             accumulateData=False,
             testSplit=0,
+            optimizer=tf.optimizers.Adam(learning_rate=tf.keras.experimental.CosineDecay(0.01, 10000000))
         )
         self.dispatcher = None
         self.batch_size = batch_size
@@ -51,10 +52,7 @@ class CategorySelfAdaptingStrategy(AbstractSelfAdaptingStrategy, Experiment):
         while self.ref_jobs and self.ref_jobs[-1].spawn_ts + self.ref_jobs[-1].duration <= ts:
             job = self.ref_jobs.pop()
             if job.compilation_ok:
-                # We also want to collect data for training of the estimate
-                type(self.dispatcher).jobDurationEstimate.collectInputs(self, job)
-                # The following line would be called when the job is finished. As we are in a simulation, the value is already known.
-                type(self.dispatcher).jobDurationEstimate.collectTargets(self, job)
+                self.dispatcher.collect_job_for_training(job)
 
     def _train(self):
         """Train the estimator."""
