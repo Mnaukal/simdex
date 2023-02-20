@@ -80,5 +80,5 @@ class NNDurationPredictor(BatchedDurationPredictor):
             self.buffer = []  # reset the job buffer at the end
 
     def _predict_batch(self, jobs) -> list:
-        x = np.array([[job.exercise_id, job.runtime_id] for job in jobs], dtype='int32')
+        x = np.array([self.job_to_input(job) for job in jobs], dtype='int32')
         return self.model(x, training=False).numpy()
