@@ -20,15 +20,19 @@ workers:
 
 # dispatcher component: either a string (fully qualified class name) or a collection with { class, args }
 # where class is fully qualified class name and args is list or dict holding constructor arguments
-dispatcher: experiments.user_experience_nn.dispatcher.JobCategoryDispatcher
+dispatcher: experiments.user_experience.dispatcher.DurationFilterDispatcher
 
-# self-adapting strategy component (same format as dispatcher)
-sa_strategy:
-  class: experiments.user_experience_nn.sa_strategy.CategorySelfAdaptingStrategy
+duration_predictor:
+  class: experiments.user_experience_nn.nn_duration_predictor.NNDurationPredictor
   args:
     layers_widths: [ 1024 ]  # each value represents a width of one hidden layer
     batch_size: 500
     batch_epochs: 5
+
+# self-adapting strategy component (same format as dispatcher)
+sa_strategy:
+  class: experiments.user_experience.sa_strategy.CategorySelfAdaptingStrategy
+  args:
     ref_jobs: "@@ref_jobs"
 
 period: 60  # in seconds, how often a sa strategy (MAPE-K loop) is invoked
@@ -41,5 +45,5 @@ metrics:
     args:
       - "@@ref_jobs"
       - [ 1.5, 3.0 ]  # thresholds
-#      - 10000  # history step
-      - 100000  # history step
+      - 10000  # history step
+#      - 100000  # history step

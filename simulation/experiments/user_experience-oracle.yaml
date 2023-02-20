@@ -22,7 +22,9 @@ workers:
 
 # dispatcher component: either a string (fully qualified class name) or a collection with { class, args }
 # where class is fully qualified class name and args is list or dict holding constructor arguments
-dispatcher: experiments.user_experience.dispatcher.OracleJobCategoryDispatcher
+dispatcher: experiments.user_experience.dispatcher.DurationFilterDispatcher
+
+duration_predictor: experiments.user_experience.oracle_duration_predictor.OracleDurationPredictor
 
 # list of metric components (each one is in the same format as dispatcher)
 metrics:

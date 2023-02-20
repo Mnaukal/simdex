@@ -1,8 +1,10 @@
 #
 # Base classes for important components and helper functions for dynamic loading and instantiation of their implementations.
 #
+import abc
 
-class AbstractMetricsCollector:
+
+class AbstractMetricsCollector(abc.ABC):
     """Base class for all metrics collectors.
 
     The snapshot() is invoked before every MAPE-K loop invocation to capture workers state periodically.
@@ -15,16 +17,17 @@ class AbstractMetricsCollector:
     def job_finished(self, job):
         pass  # an empty placeholder that just declares the interface
 
+    @abc.abstractmethod
     def print(self, machine=False, verbose=False):
         """Print the metrics to std. output.
 
         machine - if true, the output should be printed without any human-readable comments
         verbose - if true, more verbose output is given (if available)
         """
-        raise NotImplementedError
+        pass
 
 
-class AbstractDispatcher:
+class AbstractDispatcher(abc.ABC):
     """Base class (interface declaration) for all dispatchers.
 
     Dispatcher is responsible for assigning jobs into worker queues.
@@ -35,16 +38,51 @@ class AbstractDispatcher:
         """Initialize the dispatcher before the first job."""
         pass
 
+    @abc.abstractmethod
     def dispatch(self, job, workers):
         """Assign given job to one of the workers."""
-        raise NotImplementedError
-
-    def precompute_batch(self, jobs):
-        """TODO: only for performance optimization (use the NN with a batch of jobs)"""
         pass
 
 
-class AbstractSelfAdaptingStrategy:
+class AbstractDurationPredictor(abc.ABC):
+
+    @abc.abstractmethod
+    def predict_duration(self, job) -> float:
+        """Predict the duration of the given job."""
+        return 0.0
+
+    def add_job(self, job, isRef=False):
+        """Adds a job to the training dataset of the predictor. The training can happen immediately, or later."""
+        pass
+
+
+class BatchedDurationPredictor(AbstractDurationPredictor, abc.ABC):
+
+    def __init__(self):
+        self.duration_prediction_cache = {}
+
+    @abc.abstractmethod
+    def _predict_batch(self, jobs) -> list:
+        pass
+
+    def precompute_batch(self, jobs):
+        predictions = self._predict_batch(jobs)
+        self.duration_prediction_cache = dict(zip(jobs, predictions))
+
+    def predict_duration(self, job) -> float:
+        if job in self.duration_prediction_cache:
+            return self.duration_prediction_cache[job]
+        else:
+            return self._predict_batch([job])[0]
+
+
+class AbstractDispatcherWithDurationPredictor(AbstractDispatcher, abc.ABC):
+
+    def __init__(self):
+        self.duration_predictor: AbstractDurationPredictor = ...
+
+
+class AbstractSelfAdaptingStrategy(abc.ABC):
     """Represents the controller used for self-adaptation of the system.
 
     The main part is hidden into do_adapt() method that is used both for monitoring (collecting data)
@@ -55,6 +93,7 @@ class AbstractSelfAdaptingStrategy:
         """Called once when the simulation starts."""
         pass
 
+    @abc.abstractmethod
     def do_adapt(self, ts, dispatcher, workers, job=None):
         """The main interface method called from the simulation.
 
@@ -65,7 +104,7 @@ class AbstractSelfAdaptingStrategy:
         The workers use generic attribute abstraction, dispatcher is implemented along with the SA strategy,
         so the user may design whatever interface is necessary between these two modules.
         """
-        raise NotImplementedError
+        pass
 
 
 def create_component(class_name, constructor_args={}):

@@ -1,5 +1,5 @@
 from workers import WorkerQueue
-from interfaces import create_component
+from interfaces import create_component, AbstractDispatcher, AbstractSelfAdaptingStrategy
 
 
 def _create_instance(config, ref_jobs, hash_converters):
@@ -39,9 +39,11 @@ class Simulation:
             for metric in configuration["metrics"]:
                 self.metrics.append(_create_instance(metric, ref_jobs, hash_converters))
 
-        self.dispatcher = _create_instance(configuration["dispatcher"], ref_jobs, hash_converters)
+        self.dispatcher: AbstractDispatcher = _create_instance(configuration["dispatcher"], ref_jobs, hash_converters)
+        if "duration_predictor" in configuration:
+            self.dispatcher.duration_predictor = _create_instance(configuration["duration_predictor"], ref_jobs, hash_converters)
         if "sa_strategy" in configuration:
-            self.sa_strategy = _create_instance(configuration["sa_strategy"], ref_jobs, hash_converters)
+            self.sa_strategy: AbstractSelfAdaptingStrategy = _create_instance(configuration["sa_strategy"], ref_jobs, hash_converters)
         else:
             self.sa_strategy = None  # strategy can be empty (i.e., no MAPE-K) for baseline ref. measurements
 

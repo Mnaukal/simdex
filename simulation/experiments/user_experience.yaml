@@ -22,13 +22,14 @@ workers:
 
 # dispatcher component: either a string (fully qualified class name) or a collection with { class, args }
 # where class is fully qualified class name and args is list or dict holding constructor arguments
-dispatcher: experiments.user_experience.dispatcher.JobCategoryDispatcher
+dispatcher: experiments.user_experience.dispatcher.DurationFilterDispatcher
+
+duration_predictor: experiments.user_experience.statistical_duration_predictor.StatisticalDurationPredictor
 
 # self-adapting strategy component (same format as dispatcher)
 sa_strategy:
   class: experiments.user_experience.sa_strategy.CategorySelfAdaptingStrategy
   args:
-    - 2  # max. number of long worker queues
     - "@@ref_jobs"
 period: 60  # in seconds, how often a sa strategy (MAPE-K loop) is invoked
 
