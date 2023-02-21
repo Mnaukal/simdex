@@ -7,6 +7,12 @@ import numpy as np
 from constants import RUNTIME_ID_COUNT, EXERCISE_ID_COUNT
 from interfaces import BatchedDurationPredictor
 
+try:
+    tf.config.threading.set_inter_op_parallelism_threads(4)
+    tf.config.threading.set_intra_op_parallelism_threads(4)
+except RuntimeError:  # "Inter op parallelism cannot be modified after initialization."
+    pass
+
 
 class NNDurationPredictor(BatchedDurationPredictor):
     """Uses machine-learning neural-network regression model to predict the job duration.
@@ -17,9 +23,6 @@ class NNDurationPredictor(BatchedDurationPredictor):
 
     def __init__(self, layers_widths=[64], batch_size=5000, batch_epochs=5, ref_jobs=None):
         super().__init__()
-
-        tf.config.threading.set_inter_op_parallelism_threads(8)
-        tf.config.threading.set_intra_op_parallelism_threads(8)
 
         self.layers_widths = layers_widths
         self.batch_size = batch_size

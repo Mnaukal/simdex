@@ -1,6 +1,7 @@
 import collections
 import os
 
+from constants import TL_GROUP_COUNT, EXERCISE_ID_COUNT, RUNTIME_ID_COUNT
 from experiments.user_experience_rl.replay_buffer import ReplayBuffer
 
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
@@ -13,10 +14,25 @@ from interfaces import AbstractSelfAdaptingStrategy
 class Network:
     def __init__(self, worker_count, hidden_layers) -> None:
 
-        input_layer = tf.keras.layers.Input(1 + 2 * worker_count)
+        input_layer = tf.keras.layers.Input(4 + 2 * worker_count)
+
+        # split the inputs
+        exercise_id = tf.cast(input_layer[:, 0], tf.int32)
+        runtime_id = tf.cast(input_layer[:, 1], tf.int32)
+        tlgroup_id = tf.cast(input_layer[:, 2], tf.int32)
+
+        # one-hot encoding
+        exercise_id = tf.one_hot(exercise_id, EXERCISE_ID_COUNT, name="exercise_id")
+        runtime_id = tf.one_hot(runtime_id, RUNTIME_ID_COUNT, name="runtime_id")
+        tlgroup_id = tf.one_hot(tlgroup_id, TL_GROUP_COUNT, name="tlgroup_id")
+
+        categorical_inputs = tf.keras.layers.Concatenate()([exercise_id, runtime_id, tlgroup_id])
+        categorical_inputs = tf.keras.layers.Dense(70, activation=tf.nn.relu)(categorical_inputs)
+
+        inputs = tf.keras.layers.Concatenate()([categorical_inputs, input_layer[:, 3:]])
 
         # construct the network
-        hidden = input_layer
+        hidden = inputs
         for size in hidden_layers:
             hidden = tf.keras.layers.Dense(size, activation=tf.nn.relu)(hidden)
 
@@ -47,11 +63,6 @@ class Network:
         for var, other_var in zip(self._model.variables, other._model.variables):
             var.assign(other_var)
 
-    @tf.function
-    def update_weights_from(self, other: 'Network', tau) -> None:
-        for var, other_var in zip(self._model.variables, other._model.variables):
-            var.assign(var * (1 - tau) + other_var * tau)
-
 
 Transition = collections.namedtuple("Transition", ["state", "action", "reward", "next_state"])
 
@@ -60,7 +71,7 @@ class CategorySelfAdaptingStrategy(AbstractSelfAdaptingStrategy):
     """TODO:
     """
 
-    def __init__(self, worker_count, layers_widths=[50], batch_size=64, replay_buffer_size=50_000, gamma=0.99, tau=0.01):
+    def __init__(self, worker_count, layers_widths=[50], batch_size=64, replay_buffer_size=50_000, gamma=0.99):
         tf.keras.utils.set_random_seed(42)
         tf.config.threading.set_inter_op_parallelism_threads(8)
         tf.config.threading.set_intra_op_parallelism_threads(8)
@@ -72,7 +83,6 @@ class CategorySelfAdaptingStrategy(AbstractSelfAdaptingStrategy):
         self.batch_size = batch_size
         self.replay_buffer = ReplayBuffer(replay_buffer_size)
         self.gamma = gamma
-        self.tau = tau
 
     def _train_batch(self):
         """Take the job buffer and use it as batch for training."""
@@ -96,9 +106,7 @@ class CategorySelfAdaptingStrategy(AbstractSelfAdaptingStrategy):
     def do_adapt(self, ts, dispatcher, workers, job=None):
         if job and job.compilation_ok:
             self._train_batch()
-            self.target_network.update_weights_from(self.network, self.tau)
         else:
             # for _ in range(10):
             #     self._train_batch()
-            # self.target_network.copy_weights_from(self.network)
-            pass
+            self.target_network.copy_weights_from(self.network)

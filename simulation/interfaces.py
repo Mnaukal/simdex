@@ -71,9 +71,9 @@ class BatchedDurationPredictor(AbstractDurationPredictor, abc.ABC):
 
     def predict_duration(self, job) -> float:
         if job in self.duration_prediction_cache:
-            return self.duration_prediction_cache[job]
+            return float(self.duration_prediction_cache[job])
         else:
-            return self._predict_batch([job])[0]
+            return float(self._predict_batch([job])[0])
 
 
 class AbstractDispatcherWithDurationPredictor(AbstractDispatcher, abc.ABC):

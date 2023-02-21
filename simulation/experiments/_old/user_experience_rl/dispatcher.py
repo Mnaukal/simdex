@@ -20,7 +20,10 @@ class JobCategoryDispatcher(AbstractDispatcher):
     @staticmethod
     def _get_state(job, workers):
         return [
-            job.duration,  # TODO: this is oracle, replace with NN or JobDurationIndex
+            job.exercise_id,
+            job.runtime_id,
+            job.tlgroup_id,
+            np.log2(max(job.limits, 1)),
             *[worker.jobs_count() for worker in workers],
             *[np.log2(max(sum(map(lambda j: j.limits, worker.jobs)), 1)) for worker in workers]
         ]
@@ -28,9 +31,6 @@ class JobCategoryDispatcher(AbstractDispatcher):
     def dispatch(self, job, workers):
         state = self._get_state(job, workers)
         q_values = self.q_network.predict(np.array([state]))[0]
-
-        if self.dispatched_jobs % 1000 == 0:
-            print(q_values)
 
         epsilon = np.interp(self.dispatched_jobs, [0, self.epsilon_final_after_jobs], [self.epsilon_initial, self.epsilon_final])
         if np.random.uniform() >= epsilon:

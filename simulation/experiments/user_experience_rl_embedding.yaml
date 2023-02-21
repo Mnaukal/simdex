@@ -18,22 +18,37 @@ workers:
 # dispatcher component: either a string (fully qualified class name) or a collection with { class, args }
 # where class is fully qualified class name and args is list or dict holding constructor arguments
 dispatcher:
-  class: experiments.user_experience_rl2.dispatcher.JobCategoryDispatcher
+  class: experiments.user_experience_rl.dispatcher.QNetworkDispatcher
   args:
+    worker_count: 4
     epsilon_initial: 0.3
     epsilon_final: 0.01
     epsilon_final_after_jobs: 10_000
+    q_network_args:
+      layers_widths: [ 70 ]  # each value represents a width of one hidden layer
+      replay_buffer_size: 100_000
+      gamma: 0.8
 
-# self-adapting strategy component (same format as dispatcher)
-sa_strategy:
-  class: experiments.user_experience_rl2.sa_strategy.CategorySelfAdaptingStrategy
+# duration predictor component (same format as dispatcher)
+duration_predictor:
+  class: experiments.user_experience_nn.nn_embedding_duration_predictor.NNEmbeddingDurationPredictor
   args:
-    worker_count: 4
-    layers_widths: [70]  # each value represents a width of one hidden layer
-    replay_buffer_size: 100_000
-    gamma: 0.8
+    layers_widths: [ 512, 256 ]  # each value represents a width of one hidden layer
+    batch_size: 500
+    batch_epochs: 5
+    ref_jobs: "@@ref_jobs"
+    hash_converters: "@@hash_converters"
+    embedding_training_data: "../data/release02-2023-01-04/exercise_tlgroup.csv"
+    embedding_dim: 100
+    embedding_batch_size: 5000
+    embedding_batch_epochs: 50
 
-period: 604800  # in seconds, how often a sa strategy (MAPE-K loop) is invoked
+sa_strategy:
+  class: experiments.user_experience_rl.sa_strategy.QNetworkAdaptingStrategy
+  args:
+    ref_jobs: "@@ref_jobs"
+
+period: 60  # in seconds, how often a sa strategy (MAPE-K loop) is invoked
 
 # list of metric components (each one is in the same format as dispatcher)
 metrics:
