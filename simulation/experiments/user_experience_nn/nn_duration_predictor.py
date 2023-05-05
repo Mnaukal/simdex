@@ -5,7 +5,7 @@ import tensorflow as tf
 import numpy as np
 
 from constants import RUNTIME_ID_COUNT, EXERCISE_ID_COUNT
-from interfaces import BatchedDurationPredictor
+from interfaces import AbstractBatchedDurationPredictor, AbstractAdaptiveDurationPredictor
 
 try:
     tf.config.threading.set_inter_op_parallelism_threads(4)
@@ -14,7 +14,7 @@ except RuntimeError:  # "Inter op parallelism cannot be modified after initializ
     pass
 
 
-class NNDurationPredictor(BatchedDurationPredictor):
+class NNDurationPredictor(AbstractBatchedDurationPredictor, AbstractAdaptiveDurationPredictor):
     """Uses machine-learning neural-network regression model to predict the job duration.
 
     The model is trained in SA and used by dispatcher (via estimation function interface).
@@ -74,6 +74,10 @@ class NNDurationPredictor(BatchedDurationPredictor):
     @staticmethod
     def job_to_input(job):
         return [job.exercise_id, job.runtime_id]
+
+    def add_job(self, job, isRef=False):
+        self.buffer.append(job)
+        self.train()
 
     def train(self):
         """Take the job buffer and use it as batch for training."""

@@ -1,8 +1,8 @@
-from interfaces import AbstractDurationPredictor
+from interfaces import AbstractAdaptiveDurationPredictor
 from jobs import JobDurationIndex
 
 
-class StatisticalDurationPredictor(AbstractDurationPredictor):
+class StatisticalDurationPredictor(AbstractAdaptiveDurationPredictor):
 
     def __init__(self):
         self.duration_index = JobDurationIndex()
@@ -14,5 +14,8 @@ class StatisticalDurationPredictor(AbstractDurationPredictor):
             estimate = job.limits / 2.0
         return estimate
 
-    def add_job(self, job):
+    def add_job(self, job, isRef=False):
         self.duration_index.add(job)
+
+    def train(self):
+        pass

@@ -47,6 +47,7 @@ sa_strategy:
   class: experiments.user_experience_rl.sa_strategy.QNetworkAdaptingStrategy
   args:
     ref_jobs: "@@ref_jobs"
+    q_train_interval: 1  # number of jobs between training of the Q network
 
 period: 60  # in seconds, how often a sa strategy (MAPE-K loop) is invoked
 

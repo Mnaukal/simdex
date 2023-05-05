@@ -33,9 +33,10 @@ class QNetworkDispatcher(AbstractDispatcherWithDurationPredictor):
         state = self._get_state(job, workers)
         q_values = self.q_network.predict_one(state)
 
-        if self.dispatched_jobs % 1000 == 0:
-            print(q_values)
+        # if self.dispatched_jobs % 1000 == 0:
+        #     print(q_values)
 
+        # epsilon-greedy action selection
         epsilon = np.interp(self.dispatched_jobs, [0, self.epsilon_final_after_jobs],
                             [self.epsilon_initial, self.epsilon_final])
         if np.random.uniform() >= epsilon:

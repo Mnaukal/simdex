@@ -51,12 +51,16 @@ class AbstractDurationPredictor(abc.ABC):
         """Predict the duration of the given job."""
         return 0.0
 
+
+class AbstractAdaptiveDurationPredictor(AbstractDurationPredictor, abc.ABC):
+
+    @abc.abstractmethod
     def add_job(self, job, isRef=False):
         """Adds a job to the training dataset of the predictor. The training can happen immediately, or later."""
         pass
 
 
-class BatchedDurationPredictor(AbstractDurationPredictor, abc.ABC):
+class AbstractBatchedDurationPredictor(AbstractDurationPredictor, abc.ABC):
 
     def __init__(self):
         self.duration_prediction_cache = {}

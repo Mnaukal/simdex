@@ -6,7 +6,7 @@ from datetime import datetime
 
 import ruamel.yaml as yaml
 
-from interfaces import AbstractDispatcherWithDurationPredictor, BatchedDurationPredictor
+from interfaces import AbstractDispatcherWithDurationPredictor, AbstractBatchedDurationPredictor
 from jobs import JobReader, RefJobReader, HashConverter
 from simulation import Simulation
 
@@ -74,7 +74,7 @@ if __name__ == "__main__":
     def simulate_jobs(jobs):
         # allow the dispatcher to precompute the predictions
         if isinstance(simulation.dispatcher, AbstractDispatcherWithDurationPredictor) and \
-                isinstance(simulation.dispatcher.duration_predictor, BatchedDurationPredictor):
+                isinstance(simulation.dispatcher.duration_predictor, AbstractBatchedDurationPredictor):
             simulation.dispatcher.duration_predictor.precompute_batch(jobs)
         # then simulate the jobs sequentially
         for job in jobs:
