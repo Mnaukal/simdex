@@ -59,5 +59,6 @@ metrics:
     args:
       ref_jobs: "@@ref_jobs"
       thresholds: [ 1.5, 3.0 ]
-      history_step: 10_000
+      #      history_step: 10_000
+      history_step: 100_000  # history step
       print_progress: True

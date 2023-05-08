@@ -1,3 +1,5 @@
+import sys
+
 from interfaces import AbstractMetricsCollector
 from jobs import JobDurationIndex
 
@@ -85,14 +87,13 @@ class UserExperienceMetricsCollectorWithHistory(UserExperienceMetricsCollector):
         if self.history_step is not None and self.get_total_jobs() % self.history_step == 0:
             self.log_history_step()
             if self.print_progress:
-                print()
-                self.print_history_step(self.history[-1], self.history[-2] if len(self.history) >= 2 else (0, 0, 0, 0))
+                self.print_history_step(self.history[-1], self.history[-2] if len(self.history) >= 2 else (0, 0, 0, 0), file=sys.stderr)
 
     def log_history_step(self):
         total = self.get_total_jobs()
         self.history.append((total, self.jobs_ontime, self.jobs_delayed, self.jobs_late))
 
-    def print_history_step(self, step, previous=(0, 0, 0, 0)):
+    def print_history_step(self, step, previous=(0, 0, 0, 0), file=sys.stdout):
         (total, ontime, delayed, late) = step
         total_diff = total - previous[0]
         ontime_diff = ontime - previous[1]
@@ -104,7 +105,7 @@ class UserExperienceMetricsCollectorWithHistory(UserExperienceMetricsCollector):
               f"{late:>6}, {self.percentage_of_total_jobs(late, total):>3}, "
               f"{ontime_diff:>6}, {self.percentage_of_total_jobs(ontime_diff, total_diff):>3}, "
               f"{delayed_diff:>6}, {self.percentage_of_total_jobs(delayed_diff, total_diff):>3}, "
-              f"{late_diff:>6}, {self.percentage_of_total_jobs(late_diff, total_diff):>3}")
+              f"{late_diff:>6}, {self.percentage_of_total_jobs(late_diff, total_diff):>3}", file=file)
 
     def print_history(self):
         print(" TOTAL,  ONTIME   %, DELAYED   %,    LATE   %, DIFF_ON   %, DIFF_DE   %, DIFF_LA   %")
