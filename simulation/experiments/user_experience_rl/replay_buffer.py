@@ -6,6 +6,10 @@
 # but it has unnecessary memory overhead (hundreds of MBs for 1M elements).
 # Using five numpy arrays (for state, action, reward, done, and next state)
 # would provide minimal memory overhead, but it is not so flexible.
+
+import numpy as np
+
+
 class ReplayBuffer:
     """Simple replay buffer with possibly limited capacity."""
     def __init__(self, max_length=None):
@@ -42,7 +46,7 @@ class ReplayBuffer:
         assert -len(self._data) <= index < len(self._data)
         return self._data[(self._offset + index) % len(self._data)]
 
-    def sample(self, size, generator):
+    def sample(self, size):
         # The same element can be sampled multiple times. However, making sure the samples
         # are unique is costly, and we do not mind the duplicites much during training.
-        return [self._data[index] for index in generator.randint(len(self._data), size=size)]
+        return [self._data[index] for index in np.random.randint(len(self._data), size=size)]

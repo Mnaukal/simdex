@@ -56,7 +56,7 @@ class DoubleQNetwork:
 
     def train(self):
         if len(self.replay_buffer) > self.batch_size:
-            transitions = self.replay_buffer.sample(self.batch_size, np.random)
+            transitions = self.replay_buffer.sample(self.batch_size)
 
             states = np.array([t.state for t in transitions])
             q_values = np.array(self._network.predict(states))

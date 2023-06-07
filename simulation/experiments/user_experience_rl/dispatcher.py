@@ -55,6 +55,7 @@ class QNetworkDispatcher(AbstractDispatcherWithDurationPredictor):
             reward = 0
         else:
             reward = -waiting / max(job.limits, 1)
+        # TODO: use true duration instead of limits
 
         next_state = self._get_state(job, workers)  # TODO: what is next state? We don't know which job will come next
 
