@@ -2,6 +2,13 @@
 # Base classes for important components and helper functions for dynamic loading and instantiation of their implementations.
 #
 import abc
+from typing import TYPE_CHECKING
+
+from workers import WorkerQueue
+
+if TYPE_CHECKING:
+    from simulation import Simulation
+    from jobs import Job, RefJob
 
 
 class AbstractMetricsCollector(abc.ABC):
@@ -39,12 +46,43 @@ class AbstractDispatcher(abc.ABC):
         pass
 
     @abc.abstractmethod
-    def dispatch(self, job, workers):
+    def dispatch(self, job: 'Job', workers: list['WorkerQueue'], simulation: 'Simulation'):
         """Assign given job to one of the workers."""
         pass
 
 
-class AbstractDurationPredictor(abc.ABC):
+class AbstractSystemMonitor:
+
+    def periodic_monitoring(self, simulation: 'Simulation'):
+        """The method is called periodically."""
+        pass
+
+    def job_dispatched(self, simulation: 'Simulation', job: 'Job'):
+        """The method is called after a job is dispatched."""
+        pass
+
+    def job_done(self, simulation: 'Simulation', job: 'Job'):
+        """The method is called after a job is finished."""
+        pass
+
+    def ref_job_done(self, simulation: 'Simulation', ref_job: 'RefJob'):
+        """The method is called after a reference job is finished."""
+        pass
+
+
+class OnlineMLComponent:
+
+    def __init__(self):
+        self.system_monitor: AbstractSystemMonitor = self._init_system_monitor()
+
+    def _init_system_monitor(self) -> AbstractSystemMonitor:
+        return AbstractSystemMonitor()
+
+
+class AbstractDurationPredictor(OnlineMLComponent, abc.ABC):
+
+    def init(self, ts):
+        pass
 
     @abc.abstractmethod
     def predict_duration(self, job) -> float:
@@ -52,17 +90,11 @@ class AbstractDurationPredictor(abc.ABC):
         return 0.0
 
 
-class AbstractAdaptiveDurationPredictor(AbstractDurationPredictor, abc.ABC):
-
-    @abc.abstractmethod
-    def add_job(self, job, isRef=False):
-        """Adds a job to the training dataset of the predictor. The training can happen immediately, or later."""
-        pass
-
-
 class AbstractBatchedDurationPredictor(AbstractDurationPredictor, abc.ABC):
+    """TODO: predicts in batches to speed up the simulation."""
 
     def __init__(self):
+        super().__init__()
         self.duration_prediction_cache = {}
 
     @abc.abstractmethod
@@ -80,58 +112,6 @@ class AbstractBatchedDurationPredictor(AbstractDurationPredictor, abc.ABC):
             return float(self._predict_batch([job])[0])
 
 
-class AbstractDispatcherWithDurationPredictor(AbstractDispatcher, abc.ABC):
+class AbstractWorkerSelector(OnlineMLComponent, abc.ABC):
 
-    def __init__(self):
-        self.duration_predictor: AbstractDurationPredictor = ...
-
-
-class AbstractSelfAdaptingStrategy(abc.ABC):
-    """Represents the controller used for self-adaptation of the system.
-
-    The main part is hidden into do_adapt() method that is used both for monitoring (collecting data)
-    and for adaptation (modifying the system configuration).
-    """
-
-    def init(self, ts, dispatcher, workers):
-        """Called once when the simulation starts."""
-        pass
-
-    @abc.abstractmethod
-    def do_adapt(self, ts, dispatcher, workers, job=None):
-        """The main interface method called from the simulation.
-
-        The method is called periodically (with job == None) and when new job is spawned
-        (right before the job is dispatched).
-        The ts holds simulation time, dispatcher and workers are the main objects of the simulation.
-        The do_adapt() call may choose to modify dispatcher and workers settings to change simulation behavior.
-        The workers use generic attribute abstraction, dispatcher is implemented along with the SA strategy,
-        so the user may design whatever interface is necessary between these two modules.
-        """
-        pass
-
-
-def create_component(class_name, constructor_args={}):
-    """Create an instance of a component of given name.
-
-    This is used in dynamic loading and component composition based on configuration file.
-    class_name - fully qualified name of the class (module.submodule.classname)
-    constructor_args - optional dict or list with args passed to constructor
-    """
-    components = class_name.split('.')
-    module = __import__('.'.join(components[:-1]))
-    for component in components[1:]:
-        module = getattr(module, component)
-    class_ = module
-    if class_ is None:
-        raise RuntimeError("Class {} not found.".format(class_name))
-
-    # create instance
-    if constructor_args and isinstance(constructor_args, dict):
-        obj = class_(**constructor_args)
-    elif constructor_args and isinstance(constructor_args, list):
-        obj = class_(*constructor_args)
-    else:
-        obj = class_()
-
-    return obj
+    pass

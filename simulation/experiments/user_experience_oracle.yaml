@@ -1,46 +1,37 @@
-# TODO: Scenario where user experience based on job latency is the top criterium.
+# Scenario where user experience based on job latency is the top criterium.
 # Short jobs needs to be evaluated almost interactively, long jobs may be delayed much longer.
 # The objective is achieved by imposing limits on queues, only jobs that are expected to
 # take no more than given limit are allowed in (all queues remain active the whole time).
 # The key part of the scenario is the duration estimation algorithm used by dispatcher.
 
-# This configuration uses dispatcher and SA strategy based on neural-network regression estimator.
-# The NN is trained in batches of incoming jobs as the simulation progresses.
+# This configuration uses job dispatcher with oracle that can guess the exact duration of a job.
+# The oracle is implemented by cheating, the estimate is taken from job.duration which should
+# not be accessed in dispatching in regular experiments.
+# The purpose of this configuration is to measure performance of the theoretical optimum as a reference point.
 
 # Workers could be either a number or a list that explicitly states a collection of attributes
 # If only a number is given, the workers are initialized with no attributes at the beginning.
 workers:
+  - active: true # first worker has no limit
   - active: true
+    limit: 30.0
   - active: true
+    limit: 30.0
   - active: true
-  - active: true
+    limit: 30.0
 
 # dispatcher component: either a string (fully qualified class name) or a collection with { class, args }
 # where class is fully qualified class name and args is list or dict holding constructor arguments
-dispatcher:
-  class: experiments.user_experience_rl.dispatcher.JobCategoryDispatcher
-  args:
-    epsilon_initial: 0.3
-    epsilon_final: 0.01
-    epsilon_final_after_jobs: 10_000
+dispatcher: dispatchers.DurationFilterDispatcher
 
-# self-adapting strategy component (same format as dispatcher)
-sa_strategy:
-  class: experiments.user_experience_rl.sa_strategy.CategorySelfAdaptingStrategy
-  args:
-    worker_count: 4
-    layers_widths: [70]  # each value represents a width of one hidden layer
-    replay_buffer_size: 100_000
-    gamma: 0.99
-
-period: 86400  # in seconds, how often a sa strategy (MAPE-K loop) is invoked
+duration_predictor: duration_predictors.oracle_duration_predictor.OracleDurationPredictor
 
 # list of metric components (each one is in the same format as dispatcher)
 metrics:
   - metrics.default.JobDelayMetricsCollector
+  - metrics.quantile.JobDelayQuantilesCollector
   - class: metrics.user_experience.UserExperienceMetricsCollectorWithHistory
     args:
-      ref_jobs: "@@ref_jobs"
-      thresholds: [ 1.5, 3.0 ]
-      history_step: 10_000
-      print_progress: True
+      - "@@ref_jobs"
+      - [ 1.5, 3.0 ]  # thresholds
+      - 10000  # history step

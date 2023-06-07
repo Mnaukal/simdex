@@ -6,7 +6,7 @@ from datetime import datetime
 
 import ruamel.yaml as yaml
 
-from interfaces import AbstractDispatcherWithDurationPredictor, AbstractBatchedDurationPredictor
+from interfaces import AbstractBatchedDurationPredictor
 from jobs import JobReader, RefJobReader, HashConverter
 from simulation import Simulation
 
@@ -70,20 +70,17 @@ if __name__ == "__main__":
     # this way, we can invoke the neural network for a batch of jobs
     job_buffer = []
 
-
     def simulate_jobs(jobs):
         # allow the dispatcher to precompute the predictions
-        if isinstance(simulation.dispatcher, AbstractDispatcherWithDurationPredictor) and \
-                isinstance(simulation.dispatcher.duration_predictor, AbstractBatchedDurationPredictor):
-            simulation.dispatcher.duration_predictor.precompute_batch(jobs)
+        if isinstance(simulation.duration_predictor, AbstractBatchedDurationPredictor):
+            simulation.duration_predictor.precompute_batch(jobs)
         # then simulate the jobs sequentially
         for job in jobs:
-            simulation.run(job)
-
+            simulation.run_job(job)
 
     # run one job to initialize simulation
     job = next(reader)
-    simulation.run(job)
+    simulation.run_job(job)
     counter += 1
 
     for job in reader:
@@ -108,7 +105,7 @@ if __name__ == "__main__":
         simulate_jobs(job_buffer)
 
     print()
-    simulation.run(None)  # end the simulation
+    simulation.end()
     reader.close()
 
     simulation_end_time = datetime.now()

@@ -20,10 +20,10 @@ Transition = collections.namedtuple("Transition", ["state", "action", "reward", 
 
 
 class DoubleQNetwork:
-    def __init__(self, inputs_count, actions_count, layers_widths=[50], batch_size=64, replay_buffer_size=50_000, gamma=0.99, tau=0.01) -> None:
+    def __init__(self, inputs_count, actions_count, layer_widths=[50], batch_size=64, replay_buffer_size=50_000, gamma=0.99, tau=0.01) -> None:
 
-        self._network = self._construct_model(inputs_count, actions_count, layers_widths)
-        self._target_network = self._construct_model(inputs_count, actions_count, layers_widths)
+        self._network = self._construct_model(inputs_count, actions_count, layer_widths)
+        self._target_network = self._construct_model(inputs_count, actions_count, layer_widths)
 
         self.batch_size = batch_size
         self.replay_buffer = ReplayBuffer(replay_buffer_size)
@@ -31,11 +31,11 @@ class DoubleQNetwork:
         self.tau = tau
 
     @staticmethod
-    def _construct_model(inputs_count, actions_count, layers_widths) -> tf.keras.Model:
+    def _construct_model(inputs_count, actions_count, layer_widths) -> tf.keras.Model:
         input_layer = tf.keras.layers.Input(inputs_count)
 
         hidden = input_layer
-        for width in layers_widths:
+        for width in layer_widths:
             hidden = tf.keras.layers.Dense(width, activation=tf.nn.relu)(hidden)
 
         action_values = tf.keras.layers.Dense(actions_count, name="action_values")(hidden)

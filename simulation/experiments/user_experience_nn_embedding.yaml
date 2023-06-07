@@ -25,7 +25,7 @@ dispatcher: experiments.user_experience.dispatcher.DurationFilterDispatcher
 duration_predictor:
   class: experiments.user_experience_nn.nn_embedding_duration_predictor.NNEmbeddingDurationPredictor
   args:
-    layers_widths: [ 512, 256 ]  # each value represents a width of one hidden layer
+    layer_widths: [ 512, 256 ]  # each value represents a width of one hidden layer
     batch_size: 500
     batch_epochs: 5
     ref_jobs: "@@ref_jobs"

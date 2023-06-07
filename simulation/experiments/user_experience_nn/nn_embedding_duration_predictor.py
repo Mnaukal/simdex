@@ -15,14 +15,14 @@ class NNEmbeddingDurationPredictor(NNDurationPredictor):
     The model is implemented in TensorFlow.
     """
 
-    def __init__(self, layers_widths=[64], batch_size=5000, batch_epochs=5, ref_jobs=None, hash_converters=None, embedding_training_data=None, embedding_dim=100, embedding_batch_size=5000, embedding_batch_epochs=20):
+    def __init__(self, layer_widths=[64], batch_size=5000, batch_epochs=5, ref_jobs=None, hash_converters=None, embedding_training_data=None, embedding_dim=100, embedding_batch_size=5000, embedding_batch_epochs=20):
         self.hash_converters = hash_converters
         self.embedding_training_data = embedding_training_data
         self.embedding_dim = embedding_dim
         self.embedding_batch_size = embedding_batch_size
         self.embedding_batch_epochs = embedding_batch_epochs
 
-        super().__init__(layers_widths, batch_size, batch_epochs, ref_jobs)  # constructs the models
+        super().__init__(layer_widths, batch_size, batch_epochs, ref_jobs)  # constructs the models
 
         self._train_embedding()
 

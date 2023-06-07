@@ -25,7 +25,7 @@ dispatcher:
     epsilon_final: 0.01
     epsilon_final_after_jobs: 10_000
     q_network_args:
-      layers_widths: [70]  # each value represents a width of one hidden layer
+      layer_widths: [70]  # each value represents a width of one hidden layer
       replay_buffer_size: 100_000
       gamma: 0.8
 

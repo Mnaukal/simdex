@@ -1,5 +1,4 @@
 from interfaces import AbstractDurationPredictor
-from jobs import JobDurationIndex
 
 
 class OracleDurationPredictor(AbstractDurationPredictor):

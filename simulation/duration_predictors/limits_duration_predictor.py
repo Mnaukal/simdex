@@ -1,5 +1,4 @@
-from interfaces import AbstractDurationPredictor
-from jobs import JobDurationIndex
+from interfaces import AbstractDurationPredictor, AbstractSystemMonitor
 
 
 class LimitsDurationPredictor(AbstractDurationPredictor):
