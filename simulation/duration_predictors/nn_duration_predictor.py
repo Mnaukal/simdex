@@ -3,6 +3,7 @@ os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by d
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # Disable GPU in TF. The models are small, so it is actually faster to use the CPU.
 import tensorflow as tf
 import numpy as np
+from collections import deque
 
 from constants import RUNTIME_ID_COUNT, EXERCISE_ID_COUNT
 from interfaces import AbstractBatchedDurationPredictor, AbstractSystemMonitor
@@ -16,10 +17,16 @@ except RuntimeError:  # "Inter op parallelism cannot be modified after initializ
 
 class MLModel:
 
-    def __init__(self, layer_widths):
-        self.model: tf.keras.Model = self._create_model(layer_widths)
+    def __init__(self, copy_from: 'MLModel' = None, **model_params):
+        if copy_from:
+            self.model = tf.keras.models.clone_model(copy_from.model)
+        else:
+            self.model: tf.keras.Model = self._create_model(**model_params)
 
-    def _create_model(self, layer_widths):
+        self._compile()
+
+    def _create_model(self, **model_params):
+        layer_widths = model_params['layer_widths']
         all_inputs, encoded_features = self._prepare_inputs()
 
         last_layer = tf.keras.layers.Concatenate()(encoded_features)
@@ -28,10 +35,12 @@ class MLModel:
         output = tf.keras.layers.Dense(1, tf.keras.activations.exponential)(last_layer)
 
         model = tf.keras.Model(inputs=all_inputs, outputs=output)
-        learning_rate = tf.keras.experimental.CosineDecay(0.01, 10000000)
-        model.compile(optimizer=tf.optimizers.Adam(learning_rate=learning_rate), loss=tf.losses.Poisson())
-        # model.summary()
         return model
+
+    def _compile(self):
+        learning_rate = tf.keras.experimental.CosineDecay(0.01, 10000000)
+        self.model.compile(optimizer=tf.optimizers.Adam(learning_rate=learning_rate), loss=tf.losses.Poisson())
+        # model.summary()
 
     def _prepare_inputs(self):
         all_inputs = tf.keras.Input(shape=(2,), dtype='int32')
@@ -112,10 +121,10 @@ class SystemMonitor(AbstractSystemMonitor):
         self.parent = parent
 
     def job_done(self, simulation, job):
-        self.parent.add_job(job)
+        self.parent.add_training_datum(job)
 
     def ref_job_done(self, simulation, ref_job):
-        self.parent.add_job(ref_job)
+        self.parent.add_training_datum(ref_job)
 
 
 class MLMonitor:
@@ -127,7 +136,7 @@ class MLMonitor:
     def job_added(self, job):
         if self.parent.data_storage.job_count >= self.batch_size:
             self.parent.training.train()
-            # TODO: update inference model
+            self.parent.update_inference_model()
 
 
 class Training:
@@ -137,35 +146,33 @@ class Training:
         self.batch_size = batch_size
         self.batch_epochs = batch_epochs
 
-    def train(self, model=None):
+    def train(self, original_model=None):
         x, y = self.parent.data_storage.pop_batch()
 
-        if model is None:
-            model = self.parent.ml_model_storage.get_latest_model()
-        # TODO: clone model
+        if original_model is None:
+            original_model = self.parent.ml_model_storage.get_latest_model()
+
+        model = MLModel(original_model)
 
         model.fit(x, y, batch_size=self.batch_size, epochs=self.batch_epochs, verbose=False)
-        # TODO: save model to model storage
+
+        self.parent.ml_model_storage.save_model(model)
 
 
 class MLModelStorage:
 
-    def __init__(self, **model_params):
-        self.model_params = model_params
-        self.models = [
-            MLModel(**model_params)
-        ]
+    def __init__(self):
+        self.models = deque(maxlen=10)  # keep the last 10 models
 
     def get_latest_model(self):
         return self.models[-1]
 
+    def save_model(self, model):
+        self.models.append(model)
+
 
 class NNDurationPredictor(AbstractBatchedDurationPredictor):
-    """Uses machine-learning neural-network regression model to predict the job duration.
-
-    The model is trained in SA and used by dispatcher (via estimation function interface).
-    The model is implemented in TensorFlow.
-    """
+    """Uses neural network regression model to predict the job duration. The model is implemented in TensorFlow."""
 
     def __init__(self, layer_widths=[64], batch_size=5000, batch_epochs=5):
         super().__init__()
@@ -174,13 +181,23 @@ class NNDurationPredictor(AbstractBatchedDurationPredictor):
         self.ml_monitor = MLMonitor(self, batch_size)
         self.data_processor = DataProcessor()
         self.training = Training(self, batch_size, batch_epochs)
-        self.ml_model_storage = MLModelStorage(layer_widths=layer_widths)
+        self.ml_model_storage = MLModelStorage()
         self.data_storage = DataStorage()
         self.inference = Inference()
 
+        if not hasattr(self, "model_params"):
+            self.model_params = {"layer_widths": layer_widths}
+
+        self.ml_model_storage.save_model(self._create_initial_model())
+        self.update_inference_model()
+
+    def _create_initial_model(self):
+        return MLModel(None, **self.model_params)
+
+    def update_inference_model(self):
         self.inference.set_model(self.ml_model_storage.get_latest_model())
 
-    def add_job(self, job):
+    def add_training_datum(self, job):
         x, y = self.data_processor.process(job)
         self.data_storage.add(x, y)
         self.ml_monitor.job_added(job)

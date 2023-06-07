@@ -3,28 +3,23 @@ os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by d
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # Disable GPU in TF. The models are small, so it is actually faster to use the CPU.
 import tensorflow as tf
 
-from experiments.user_experience_nn.nn_duration_predictor import NNDurationPredictor
+from duration_predictors.nn_duration_predictor import NNDurationPredictor, MLModel, DataProcessor
 from constants import RUNTIME_ID_COUNT, EXERCISE_ID_COUNT, TL_GROUP_COUNT
 from jobs import ReaderBase
 
 
-class NNEmbeddingDurationPredictor(NNDurationPredictor):
-    """Uses machine-learning neural-network regression model to predict the job duration.
+class EmbeddingsMLModel(MLModel):
 
-    The model is trained in SA and used by dispatcher (via estimation function interface).
-    The model is implemented in TensorFlow.
-    """
-
-    def __init__(self, layer_widths=[64], batch_size=5000, batch_epochs=5, ref_jobs=None, hash_converters=None, embedding_training_data=None, embedding_dim=100, embedding_batch_size=5000, embedding_batch_epochs=20):
-        self.hash_converters = hash_converters
-        self.embedding_training_data = embedding_training_data
-        self.embedding_dim = embedding_dim
-        self.embedding_batch_size = embedding_batch_size
-        self.embedding_batch_epochs = embedding_batch_epochs
-
-        super().__init__(layer_widths, batch_size, batch_epochs, ref_jobs)  # constructs the models
-
-        self._train_embedding()
+    def __init__(self, copy_from, **model_params):
+        self.embedding_dim = model_params['embedding_dim']
+        self.hash_converters = model_params['hash_converters']
+        self.embedding_training_data = model_params['embedding_training_data']
+        self.embedding_dim = model_params['embedding_dim']
+        self.embedding_batch_size = model_params['embedding_batch_size']
+        self.embedding_batch_epochs = model_params['embedding_batch_epochs']
+        super().__init__(copy_from, **model_params)
+        if copy_from is None:
+            self._train_embedding()
 
     def _construct_embeddings(self):
         exercise_id = tf.keras.Input(shape=(1,), dtype='int32')
@@ -89,6 +84,28 @@ class NNEmbeddingDurationPredictor(NNDurationPredictor):
         self.embedding_layer.trainable = False
         print("Embeddings training done.")
 
+
+class EmbeddingsDataProcessor(DataProcessor):
+
     @staticmethod
     def job_to_input(job):
         return [job.exercise_id, job.runtime_id, job.tlgroup_id if hasattr(job, "tlgroup_id") else 0]
+
+
+class NNEmbeddingDurationPredictor(NNDurationPredictor):
+    """Uses neural network regression model to predict the job duration. The model is implemented in TensorFlow."""
+
+    def __init__(self, layer_widths=[64], batch_size=5000, batch_epochs=5, hash_converters=None, embedding_training_data=None, embedding_dim=100, embedding_batch_size=5000, embedding_batch_epochs=20):
+        self.model_params = {
+            'layer_widths': layer_widths,
+            'hash_converters': hash_converters,
+            'embedding_training_data': embedding_training_data,
+            'embedding_dim': embedding_dim,
+            'embedding_batch_size': embedding_batch_size,
+            'embedding_batch_epochs': embedding_batch_epochs
+        }
+        super().__init__(layer_widths, batch_size, batch_epochs)  # constructs the models
+        self.data_processor = EmbeddingsDataProcessor()
+
+    def _create_initial_model(self):
+        return EmbeddingsMLModel(None, **self.model_params)
