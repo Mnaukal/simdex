@@ -131,19 +131,19 @@ class SystemMonitor(AbstractSystemMonitor):
 
 class MLMonitor:
 
-    def __init__(self, parent: 'QNetworkWorkerSelector', q_train_interval):
+    def __init__(self, parent: 'QNetworkWorkerSelector', training_interval):
         self.parent = parent
-        self.q_train_interval = q_train_interval
-        self.data_since_last_q_training = 0
+        self.training_interval = training_interval
+        self.data_since_last_training = 0
 
         self.inference_timer = Timer("Average RL inference time")
         self.training_timer = Timer("Average RL training time")
 
     def transition_added(self):
-        self.data_since_last_q_training += 1
-        if self.data_since_last_q_training >= self.q_train_interval:
+        self.data_since_last_training += 1
+        if self.data_since_last_training >= self.training_interval:
             self.parent.training.train()
-            self.data_since_last_q_training = 0
+            self.data_since_last_training = 0
 
     def periodic_update(self):
         self.parent.training.update_target_network()
@@ -170,14 +170,14 @@ class Training:
 
 class QNetworkWorkerSelector(AbstractWorkerSelector):
 
-    def __init__(self, epsilon_initial=0.3, epsilon_final=0.01, epsilon_final_after_jobs=10_000, batch_size=64, replay_buffer_size=50_000, q_train_interval=1, **q_network_args):
+    def __init__(self, epsilon_initial=0.3, epsilon_final=0.01, epsilon_final_after_jobs=10_000, batch_size=64, replay_buffer_size=50_000, training_interval=1, **q_network_args):
         super().__init__()
 
         self.q_network_args = q_network_args
         self.q_network: DoubleQNetwork = ...
 
         self.system_monitor = SystemMonitor(self)
-        self.ml_monitor = MLMonitor(self, q_train_interval)
+        self.ml_monitor = MLMonitor(self, training_interval)
         self.data_processor = DataProcessor()
         self.training = Training(self, batch_size)
         self.data_storage = DataStorage(self, replay_buffer_size)

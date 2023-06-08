@@ -18,7 +18,7 @@ class EmbeddingsMLModel(MLModel):
         self.embedding_training_data = model_params['embedding_training_data']
         self.embedding_dim = model_params['embedding_dim']
         self.embedding_batch_size = model_params['embedding_batch_size']
-        self.embedding_batch_epochs = model_params['embedding_batch_epochs']
+        self.embedding_training_epochs = model_params['embedding_training_epochs']
         super().__init__(copy_from, **model_params)
         if copy_from is None:
             self._train_embedding()
@@ -81,7 +81,7 @@ class EmbeddingsMLModel(MLModel):
         print("Training embeddings...")
         self.embedding_model.fit(x, y,
                                  batch_size=self.embedding_batch_size,
-                                 epochs=self.embedding_batch_epochs,
+                                 epochs=self.embedding_training_epochs,
                                  verbose=2)
         self.embedding_layer.trainable = False
         print(f"Embeddings training done. {datetime.now()}")
@@ -97,15 +97,15 @@ class EmbeddingsDataProcessor(DataProcessor):
 class NNEmbeddingDurationPredictor(NNDurationPredictor):
     """Uses neural network regression model to predict the job duration. The model is implemented in TensorFlow."""
 
-    def __init__(self, layer_widths=[64], batch_size=5000, batch_epochs=5, hash_converters=None, embedding_training_data=None, embedding_dim=100, embedding_batch_size=5000, embedding_batch_epochs=20):
-        super().__init__(layer_widths, batch_size, batch_epochs)
+    def __init__(self, layer_widths=[256], training_interval=1000, batch_size=1000, training_epochs=5, hash_converters=None, embedding_training_data=None, embedding_dim=100, embedding_batch_size=5000, embedding_training_epochs=20):
+        super().__init__(layer_widths, training_interval, batch_size, training_epochs)
         self.model_params.update({
             'layer_widths': layer_widths,
             'hash_converters': hash_converters,
             'embedding_training_data': embedding_training_data,
             'embedding_dim': embedding_dim,
             'embedding_batch_size': embedding_batch_size,
-            'embedding_batch_epochs': embedding_batch_epochs
+            'embedding_training_epochs': embedding_training_epochs
         })
         self.data_processor = EmbeddingsDataProcessor()
 

@@ -39,12 +39,14 @@ if __name__ == "__main__":
                         help="Path to .csv or .csv.gz file with log with jobs of reference solutions.")
     parser.add_argument("--progress", default=False, action="store_true",
                         help="If present, progress visualization is on.")
-    parser.add_argument("--inference_batch_size", type=int, default=500,
+    parser.add_argument("--inference_batch_size", type=int,
                         help="Perform the ML-based prediction for a batch of jobs at the same time to improve performance.")
     args = parser.parse_args()
 
     # initialize the system
     configuration = get_configuration(args.config)
+    if args.inference_batch_size is None:
+        args.inference_batch_size = configuration.get("inference_batch_size", 500)
     hash_converters = {
         "solution_id": HashConverter(),
         "group_id": HashConverter(),

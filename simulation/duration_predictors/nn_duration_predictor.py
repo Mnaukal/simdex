@@ -93,11 +93,9 @@ class DataStorage:
     def job_count(self) -> int:
         return len(self.x_buffer)
 
-    def pop_batch(self) -> tuple:
-        x = np.array(self.x_buffer)
-        y = np.array(self.y_buffer)
-        self.x_buffer = []
-        self.y_buffer = []
+    def get_batch(self, batch_size) -> tuple:
+        x = np.array(self.x_buffer[-batch_size:])
+        y = np.array(self.y_buffer[-batch_size:])
         return x, y
 
 
@@ -132,25 +130,25 @@ class SystemMonitor(AbstractSystemMonitor):
 
 class MLMonitor:
 
-    def __init__(self, parent: 'NNDurationPredictor', batch_size):
+    def __init__(self, parent: 'NNDurationPredictor', training_interval):
         self.parent = parent
-        self.batch_size = batch_size
+        self.training_interval = training_interval
 
         self.inference_timer = Timer("Average ML inference time")
         self.training_timer = Timer("Average ML training time")
 
     def job_added(self, job):
-        if self.parent.data_storage.job_count >= self.batch_size:
+        if self.parent.data_storage.job_count >= self.training_interval:
             self.parent.training.train()
             self.parent.update_inference_model()
 
 
 class Training:
 
-    def __init__(self, parent: 'NNDurationPredictor', batch_size, batch_epochs):
+    def __init__(self, parent: 'NNDurationPredictor', batch_size, training_epochs):
         self.parent = parent
         self.batch_size = batch_size
-        self.batch_epochs = batch_epochs
+        self.training_epochs = training_epochs
 
     def train(self, original_model=None):
         if self.parent.data_storage.job_count < self.batch_size:
@@ -158,14 +156,14 @@ class Training:
 
         self.parent.ml_monitor.training_timer.start()
 
-        x, y = self.parent.data_storage.pop_batch()
+        x, y = self.parent.data_storage.get_batch(self.batch_size)
 
         if original_model is None:
             original_model = self.parent.ml_model_storage.get_latest_model()
 
         model = MLModel(original_model)
 
-        model.fit(x, y, batch_size=self.batch_size, epochs=self.batch_epochs, verbose=False)
+        model.fit(x, y, batch_size=self.batch_size, epochs=self.training_epochs, verbose=False)
 
         self.parent.ml_model_storage.save_model(model)
 
@@ -187,13 +185,13 @@ class MLModelStorage:
 class NNDurationPredictor(AbstractBatchedDurationPredictor):
     """Uses neural network regression model to predict the job duration. The model is implemented in TensorFlow."""
 
-    def __init__(self, layer_widths=[64], batch_size=5000, batch_epochs=5):
+    def __init__(self, layer_widths=[256], training_interval=1000, batch_size=1000, training_epochs=5):
         super().__init__()
 
         self.system_monitor = SystemMonitor(self)
-        self.ml_monitor = MLMonitor(self, batch_size)
+        self.ml_monitor = MLMonitor(self, training_interval)
         self.data_processor = DataProcessor()
-        self.training = Training(self, batch_size, batch_epochs)
+        self.training = Training(self, batch_size, training_epochs)
         self.ml_model_storage = MLModelStorage()
         self.data_storage = DataStorage()
         self.inference = Inference()

@@ -26,13 +26,14 @@ duration_predictor:
   class: duration_predictors.nn_embedding_duration_predictor.NNEmbeddingDurationPredictor
   args:
     layer_widths: [ 512, 256 ]  # each value represents a width of one hidden layer
-    batch_size: 500
-    batch_epochs: 5
+    training_interval: 500
+    batch_size: 1000
+    training_epochs: 5
     hash_converters: "@@hash_converters"
     embedding_training_data: "../data/release02-2023-01-04/exercise_tlgroup.csv"
     embedding_dim: 100
     embedding_batch_size: 5000
-    embedding_batch_epochs: 100
+    embedding_training_epochs: 100
 
 
 period: 60  # in seconds, how often a sa strategy (MAPE-K loop) is invoked

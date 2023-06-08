@@ -22,27 +22,30 @@ dispatcher: dispatchers.WorkerSelectorDispatcher
 worker_selector:
   class: worker_selectors.q_network_worker_selector.QNetworkWorkerSelector
   args:
+    # inference
     epsilon_initial: 0.3
     epsilon_final: 0.01
     epsilon_final_after_jobs: 10_000
-    # q_network_args:
+    # training
     layer_widths: [70]  # each value represents a width of one hidden layer
     replay_buffer_size: 100_000
     gamma: 0.8
-    q_train_interval: 1000  # number of jobs between training of the Q network
+    training_interval: 1000  # number of jobs between training of the Q network
+    batch_size: 1000
 
 # duration predictor component (same format as dispatcher)
 duration_predictor:
   class: duration_predictors.nn_embedding_duration_predictor.NNEmbeddingDurationPredictor
   args:
     layer_widths: [ 512, 256 ]  # each value represents a width of one hidden layer
-    batch_size: 500
-    batch_epochs: 5
+    training_interval: 500
+    batch_size: 1000
+    training_epochs: 5
     hash_converters: "@@hash_converters"
     embedding_training_data: "../data/release02-2023-01-04/exercise_tlgroup.csv"
     embedding_dim: 100
     embedding_batch_size: 5000
-    embedding_batch_epochs: 100
+    embedding_training_epochs: 100
 
 period: 604800  # in seconds, how often a sa strategy (MAPE-K loop) is invoked
 

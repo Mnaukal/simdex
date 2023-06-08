@@ -19,16 +19,16 @@ if TYPE_CHECKING:
 
 
 class DoubleQNetwork:
-    def __init__(self, inputs_count, actions_count, layer_widths=[50], gamma=0.99, tau=0.01):
+    def __init__(self, inputs_count, actions_count, layer_widths=[50], gamma=0.99, tau=0.01, learning_rate=0.001):
 
-        self._network = self._construct_model(inputs_count, actions_count, layer_widths)
-        self._target_network = self._construct_model(inputs_count, actions_count, layer_widths)
+        self._network = self._construct_model(inputs_count, actions_count, layer_widths, learning_rate)
+        self._target_network = self._construct_model(inputs_count, actions_count, layer_widths, learning_rate)
 
         self.gamma = gamma
         self.tau = tau
 
     @staticmethod
-    def _construct_model(inputs_count, actions_count, layer_widths) -> tf.keras.Model:
+    def _construct_model(inputs_count, actions_count, layer_widths, learning_rate) -> tf.keras.Model:
         input_layer = tf.keras.layers.Input(inputs_count)
 
         hidden = input_layer
@@ -39,7 +39,7 @@ class DoubleQNetwork:
 
         model = tf.keras.Model(input_layer, action_values)
         model.compile(
-            optimizer=tf.keras.optimizers.Adam(0.001),
+            optimizer=tf.keras.optimizers.Adam(learning_rate),
             loss=tf.losses.MSE,
         )
         return model

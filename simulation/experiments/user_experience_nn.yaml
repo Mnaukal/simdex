@@ -26,8 +26,9 @@ duration_predictor:
   class: duration_predictors.nn_duration_predictor.NNDurationPredictor
   args:
     layer_widths: [ 1024 ]  # each value represents a width of one hidden layer
-    batch_size: 500
-    batch_epochs: 5
+    training_interval: 500
+    batch_size: 1000
+    training_epochs: 5
 
 period: 60  # in seconds, how often a sa strategy (MAPE-K loop) is invoked
 

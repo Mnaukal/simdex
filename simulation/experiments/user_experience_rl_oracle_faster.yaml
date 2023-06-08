@@ -24,14 +24,16 @@ duration_predictor: duration_predictors.oracle_duration_predictor.OracleDuration
 worker_selector:
   class: worker_selectors.q_network_worker_selector.QNetworkWorkerSelector
   args:
+    # inference
     epsilon_initial: 0.3
     epsilon_final: 0.01
     epsilon_final_after_jobs: 10_000
-    # q_network_args:
-    layer_widths: [70]  # each value represents a width of one hidden layer
+    # training
+    layer_widths: [ 70 ]  # each value represents a width of one hidden layer
     replay_buffer_size: 100_000
     gamma: 0.8
-    q_train_interval: 1000  # number of jobs between training of the Q network
+    training_interval: 1000  # number of jobs between training of the Q network
+    batch_size: 1000
 
 period: 604800  # in seconds, how often a sa strategy (MAPE-K loop) is invoked
 
