@@ -3,11 +3,12 @@ import gzip
 from dataclasses import dataclass
 
 
-@dataclass(unsafe_hash=True)
+@dataclass()
 class Job:
     """Structure representing one job submitted to the system."""
 
     # fields known when the job is created (spawned)
+    submission_id: int
     solution_id: int
     group_id: int  # corresponds to the lab group where the student gets the assignments
     tlgroup_id: int  # top-level group corresponds to the course the student attends
@@ -24,6 +25,7 @@ class Job:
     correctness: float  # how the solution was rated (on 0 - 1 scale, 1 being completely correct).
     compilation_ok: bool  # True if the solution passed compilation, False means that no test were actually executed
     duration: float  # how long the job took (according to logs)
+    estimated_duration: float = 0.0  # this is not filled automatically by the simulation, it has to be set manually
 
     # extra fields filled by the simulation
     start_ts: float = 0.0  # when the processing of the job actually started (simulation time)
@@ -37,8 +39,11 @@ class Job:
             self.start_ts = prev_job.finish_ts  # job starts right after previous job ends
         self.finish_ts = self.start_ts + self.duration
 
+    def __hash__(self):
+        return hash(self.submission_id)
 
-@dataclass(unsafe_hash=True)
+
+@dataclass()
 class RefJob:
     """Structure representing a reference solution job.
 
@@ -46,6 +51,7 @@ class RefJob:
     """
 
     # fields known when the job is created (spawned)
+    submission_id: int
     solution_id: int
     exercise_id: int
     runtime_id: int  # corresponds to a programming language used for the solution
@@ -57,6 +63,9 @@ class RefJob:
     correctness: float  # how the solution was rated (on 0 - 1 scale, 1 being completely correct).
     compilation_ok: bool  # True if the solution passed compilation, False means that no test were actually executed
     duration: float  # how long the job took (according to logs)
+
+    def __hash__(self):
+        return hash(self.submission_id)
 
 
 #
@@ -157,6 +166,7 @@ class JobReader(ReaderBase):
         if converters is None:
             converters = {}
         self.converters = {
+            "submission_id": converters.get("submission_id", HashConverter()),
             "solution_id": converters.get("solution_id", HashConverter()),
             "group_id": converters.get("group_id", HashConverter()),
             "tlgroup_id": converters.get("tlgroup_id", HashConverter()),
@@ -183,6 +193,7 @@ class RefJobReader(ReaderBase):
         if converters is None:
             converters = {}
         self.converters = {
+            "submission_id": converters.get("submission_id", HashConverter()),
             "solution_id": converters.get("solution_id", HashConverter()),
             "exercise_id": converters.get("exercise_id", HashConverter()),
             "runtime_id": converters.get("runtime_id", HashConverter()),

@@ -1,4 +1,6 @@
 import os
+from datetime import datetime
+
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # Disable GPU in TF. The models are small, so it is actually faster to use the CPU.
 import tensorflow as tf
@@ -82,7 +84,7 @@ class EmbeddingsMLModel(MLModel):
                                  epochs=self.embedding_batch_epochs,
                                  verbose=2)
         self.embedding_layer.trainable = False
-        print("Embeddings training done.")
+        print(f"Embeddings training done. {datetime.now()}")
 
 
 class EmbeddingsDataProcessor(DataProcessor):
@@ -96,15 +98,15 @@ class NNEmbeddingDurationPredictor(NNDurationPredictor):
     """Uses neural network regression model to predict the job duration. The model is implemented in TensorFlow."""
 
     def __init__(self, layer_widths=[64], batch_size=5000, batch_epochs=5, hash_converters=None, embedding_training_data=None, embedding_dim=100, embedding_batch_size=5000, embedding_batch_epochs=20):
-        self.model_params = {
+        super().__init__(layer_widths, batch_size, batch_epochs)
+        self.model_params.update({
             'layer_widths': layer_widths,
             'hash_converters': hash_converters,
             'embedding_training_data': embedding_training_data,
             'embedding_dim': embedding_dim,
             'embedding_batch_size': embedding_batch_size,
             'embedding_batch_epochs': embedding_batch_epochs
-        }
-        super().__init__(layer_widths, batch_size, batch_epochs)  # constructs the models
+        })
         self.data_processor = EmbeddingsDataProcessor()
 
     def _create_initial_model(self):

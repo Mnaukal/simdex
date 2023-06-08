@@ -4,9 +4,6 @@ from interfaces import AbstractDispatcher
 class DurationFilterDispatcher(AbstractDispatcher):
     """Dispatcher that tries to improve user experience by placing long jobs in a separate queue (based on estimated duration)."""
 
-    def init(self, ts, workers):
-        pass
-
     @staticmethod
     def duration_filter(est_duration):
         def fnc(w):
@@ -40,8 +37,9 @@ class WorkerSelectorDispatcher(AbstractDispatcher):
     def dispatch(self, job, workers, simulation):
         # we need to estimate the duration of the job first (! no peeking to job.duration !)
         estimate = simulation.duration_predictor.predict_duration(job)
+        job.estimated_duration = estimate
 
-        worker_index = simulation.worker_selector.select_worker(job)  # TODO
+        worker_index = simulation.worker_selector.select_worker(simulation, job)
 
         target = workers[worker_index]
         target.enqueue(job)

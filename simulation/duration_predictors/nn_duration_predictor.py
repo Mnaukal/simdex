@@ -185,10 +185,13 @@ class NNDurationPredictor(AbstractBatchedDurationPredictor):
         self.data_storage = DataStorage()
         self.inference = Inference()
 
-        if not hasattr(self, "model_params"):
-            self.model_params = {"layer_widths": layer_widths}
+        self.model_params = {
+            "layer_widths": layer_widths
+        }
 
-        self.ml_model_storage.save_model(self._create_initial_model())
+    def init(self, _simulation):
+        initial_model = self._create_initial_model()
+        self.ml_model_storage.save_model(initial_model)
         self.update_inference_model()
 
     def _create_initial_model(self):

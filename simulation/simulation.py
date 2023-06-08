@@ -1,3 +1,5 @@
+from typing import Optional
+
 from helpers import _create_instance
 from workers import WorkerQueue
 from interfaces import AbstractDispatcher, AbstractDurationPredictor, AbstractWorkerSelector
@@ -21,15 +23,13 @@ class Simulation:
         self.dispatcher: AbstractDispatcher = _create_instance(configuration["dispatcher"], ref_jobs, hash_converters)
 
         # ML and RL predictors
+        self.duration_predictor: Optional[AbstractDurationPredictor] = None
         if "duration_predictor" in configuration:
             self.duration_predictor: AbstractDurationPredictor = _create_instance(configuration["duration_predictor"], ref_jobs, hash_converters)
-        else:
-            self.duration_predictor = None
 
+        self.worker_selector: Optional[AbstractWorkerSelector] = None
         if "worker_selector" in configuration:
             self.worker_selector: AbstractWorkerSelector = _create_instance(configuration["worker_selector"], ref_jobs, hash_converters)
-        else:
-            self.worker_selector = None
 
         # how often System monitoring is called to update the ML models (in seconds)
         self.monitoring_period = float(configuration["period"]) if "period" in configuration else 60.0  # one minute is default
@@ -61,11 +61,11 @@ class Simulation:
         self.next_monitoring_ts = ts + self.monitoring_period
 
         # initialize injected components
-        self.dispatcher.init(self.ts, self.workers)
+        self.dispatcher.init(self)
         if self.duration_predictor:
-            self.duration_predictor.init(self.ts)
+            self.duration_predictor.init(self)
         if self.worker_selector:
-            self.worker_selector.init(self.ts)
+            self.worker_selector.init(self)
 
         # take an initial snapshot by the metrics collectors
         for metric in self.metrics:

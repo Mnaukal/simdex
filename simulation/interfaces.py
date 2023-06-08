@@ -41,7 +41,7 @@ class AbstractDispatcher(abc.ABC):
     Dispatcher itself runs a fixed algorithm, but its behavior may be altered in MAPE-K loop.
     """
 
-    def init(self, ts, workers):
+    def init(self, simulation: 'Simulation'):
         """Initialize the dispatcher before the first job."""
         pass
 
@@ -81,7 +81,7 @@ class OnlineMLComponent:
 
 class AbstractDurationPredictor(OnlineMLComponent, abc.ABC):
 
-    def init(self, ts):
+    def init(self, simulation: 'Simulation'):
         pass
 
     @abc.abstractmethod
@@ -114,4 +114,10 @@ class AbstractBatchedDurationPredictor(AbstractDurationPredictor, abc.ABC):
 
 class AbstractWorkerSelector(OnlineMLComponent, abc.ABC):
 
-    pass
+    def init(self, simulation: 'Simulation'):
+        pass
+
+    @abc.abstractmethod
+    def select_worker(self, simulation: 'Simulation', job: 'Job') -> int:
+        """Select the best worker for the given job and return its index."""
+        return 0

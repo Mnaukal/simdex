@@ -17,39 +17,34 @@ workers:
 
 # dispatcher component: either a string (fully qualified class name) or a collection with { class, args }
 # where class is fully qualified class name and args is list or dict holding constructor arguments
-dispatcher:
-  class: experiments.user_experience_rl.dispatcher.QNetworkDispatcher
+dispatcher: dispatchers.WorkerSelectorDispatcher
+
+worker_selector:
+  class: worker_selectors.q_network_worker_selector.QNetworkWorkerSelector
   args:
-    worker_count: 4
     epsilon_initial: 0.3
     epsilon_final: 0.01
     epsilon_final_after_jobs: 10_000
-    q_network_args:
-      layer_widths: [ 70 ]  # each value represents a width of one hidden layer
-      replay_buffer_size: 100_000
-      gamma: 0.8
+    # q_network_args:
+    layer_widths: [70]  # each value represents a width of one hidden layer
+    replay_buffer_size: 100_000
+    gamma: 0.8
+    q_train_interval: 1000  # number of jobs between training of the Q network
 
 # duration predictor component (same format as dispatcher)
 duration_predictor:
-  class: experiments.user_experience_nn.nn_embedding_duration_predictor.NNEmbeddingDurationPredictor
+  class: duration_predictors.nn_embedding_duration_predictor.NNEmbeddingDurationPredictor
   args:
     layer_widths: [ 512, 256 ]  # each value represents a width of one hidden layer
     batch_size: 500
     batch_epochs: 5
-    ref_jobs: "@@ref_jobs"
     hash_converters: "@@hash_converters"
     embedding_training_data: "../data/release02-2023-01-04/exercise_tlgroup.csv"
     embedding_dim: 100
     embedding_batch_size: 5000
-    embedding_batch_epochs: 50
+    embedding_batch_epochs: 100
 
-sa_strategy:
-  class: experiments.user_experience_rl.sa_strategy.QNetworkAdaptingStrategy
-  args:
-    ref_jobs: "@@ref_jobs"
-    q_train_interval: 1000  # number of jobs between training of the Q network
-
-period: 60  # in seconds, how often a sa strategy (MAPE-K loop) is invoked
+period: 604800  # in seconds, how often a sa strategy (MAPE-K loop) is invoked
 
 # list of metric components (each one is in the same format as dispatcher)
 metrics:
@@ -59,6 +54,6 @@ metrics:
     args:
       ref_jobs: "@@ref_jobs"
       thresholds: [ 1.5, 3.0 ]
-      #      history_step: 10_000
-      history_step: 100_000  # history step
+      history_step: 10_000
+#      history_step: 100_000  # history step
       print_progress: True

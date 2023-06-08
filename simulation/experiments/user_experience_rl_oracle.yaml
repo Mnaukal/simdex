@@ -17,25 +17,20 @@ workers:
 
 # dispatcher component: either a string (fully qualified class name) or a collection with { class, args }
 # where class is fully qualified class name and args is list or dict holding constructor arguments
-dispatcher:
-  class: experiments.user_experience_rl.dispatcher.QNetworkDispatcher
+dispatcher: dispatchers.WorkerSelectorDispatcher
+
+duration_predictor: duration_predictors.oracle_duration_predictor.OracleDurationPredictor
+
+worker_selector:
+  class: worker_selectors.q_network_worker_selector.QNetworkWorkerSelector
   args:
-    worker_count: 4
     epsilon_initial: 0.3
     epsilon_final: 0.01
     epsilon_final_after_jobs: 10_000
-    q_network_args:
-      layer_widths: [70]  # each value represents a width of one hidden layer
-      replay_buffer_size: 100_000
-      gamma: 0.8
-
-duration_predictor: experiments.user_experience.oracle_duration_predictor.OracleDurationPredictor
-
-# self-adapting strategy component (same format as dispatcher)
-sa_strategy:
-  class: experiments.user_experience_rl.sa_strategy.QNetworkAdaptingStrategy
-  args:
-    ref_jobs: "@@ref_jobs"
+    # q_network_args:
+    layer_widths: [70]  # each value represents a width of one hidden layer
+    replay_buffer_size: 100_000
+    gamma: 0.8
     q_train_interval: 1  # number of jobs between training of the Q network
 
 period: 604800  # in seconds, how often a sa strategy (MAPE-K loop) is invoked
@@ -48,6 +43,6 @@ metrics:
     args:
       ref_jobs: "@@ref_jobs"
       thresholds: [ 1.5, 3.0 ]
-      #      history_step: 10_000
-      history_step: 100_000  # history step
+      history_step: 10_000
+#      history_step: 100_000  # history step
       print_progress: True
