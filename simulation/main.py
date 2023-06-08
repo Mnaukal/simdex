@@ -72,7 +72,7 @@ if __name__ == "__main__":
 
     def simulate_jobs(jobs):
         # allow the dispatcher to precompute the predictions
-        if isinstance(simulation.duration_predictor, AbstractBatchedDurationPredictor):
+        if args.inference_batch_size > 1 and isinstance(simulation.duration_predictor, AbstractBatchedDurationPredictor):
             simulation.duration_predictor.precompute_batch(jobs)
         # then simulate the jobs sequentially
         for job in jobs:

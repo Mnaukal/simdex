@@ -1,6 +1,6 @@
 from typing import Optional
 
-from helpers import _create_instance
+from helpers import _create_instance, Timer
 from workers import WorkerQueue
 from interfaces import AbstractDispatcher, AbstractDurationPredictor, AbstractWorkerSelector
 
@@ -49,6 +49,8 @@ class Simulation:
         # remaining simulation variables
         self.ts = 0.0  # simulation time
         self.next_monitoring_ts = 0.0  # when the next System monitoring call is scheduled
+
+        self.dispatch_timer = Timer("Average dispatch time")
 
     def register_metrics(self, *metrics):
         """Additional metrics components may be registered via this method (mainly for debugging purposes)."""
@@ -127,7 +129,9 @@ class Simulation:
 
         # regular simulation step
         self.__advance_time(job.spawn_ts)
+        self.dispatch_timer.start()
         self.dispatcher.dispatch(job, self.workers, self)
+        self.dispatch_timer.stop()
         # invoke System monitoring on ML components
         if self.duration_predictor:
             self.duration_predictor.system_monitor.job_dispatched(self, job)
@@ -142,3 +146,9 @@ class Simulation:
             if worker_end_ts:
                 end_ts = max(end_ts, worker.get_finish_ts())
         self.__advance_time(end_ts + self.monitoring_period)
+
+        self.dispatch_timer.print()
+        if self.duration_predictor:
+            self.duration_predictor.end(self)
+        if self.worker_selector:
+            self.worker_selector.end(self)

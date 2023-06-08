@@ -1,3 +1,6 @@
+from datetime import datetime, timedelta
+
+
 def _create_instance(config, ref_jobs, hash_converters):
     """Helper function that creates instance of a component from configuration."""
     if isinstance(config, dict):
@@ -49,3 +52,26 @@ def create_component(class_name, constructor_args={}):
         obj = class_()
 
     return obj
+
+
+class Timer:
+
+    def __init__(self, name):
+        self.name = name
+        self.total_time = timedelta()
+        self.count = 0
+        self.__start_time: datetime = ...
+
+    def start(self):
+        self.__start_time = datetime.now()
+
+    def stop(self):
+        end_time = datetime.now()
+        self.count += 1
+        self.total_time += end_time - self.__start_time
+
+    def get_average_time(self):
+        return (self.total_time / self.count).total_seconds()
+
+    def print(self):
+        print(f"{self.name}: {self.get_average_time()} s (count: {self.count}, total: {self.total_time.total_seconds()} s)")

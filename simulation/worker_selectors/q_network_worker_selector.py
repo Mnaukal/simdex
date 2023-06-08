@@ -1,6 +1,7 @@
 import collections
 import numpy as np
 
+from helpers import Timer
 from worker_selectors.replay_buffer import ReplayBuffer
 from worker_selectors.q_network import DoubleQNetwork
 from interfaces import AbstractSystemMonitor, AbstractWorkerSelector
@@ -88,7 +89,7 @@ class DataProcessor:
         return np.array([
             job.estimated_duration,
             *[worker.jobs_count() for worker in workers],  # queue lengths (job counts)
-            *[np.log2(max(sum(map(lambda j: j.limits, worker.jobs)), 1)) for worker in workers]  # log of queue lengths (in seconds)
+            *[np.log2(max(sum(map(lambda j: j.estimated_duration, worker.jobs)), 1)) for worker in workers]  # log of estimated queue lengths (in seconds)
         ])
 
     def get_next_state(self, simulation, _job):
@@ -135,6 +136,9 @@ class MLMonitor:
         self.q_train_interval = q_train_interval
         self.data_since_last_q_training = 0
 
+        self.inference_timer = Timer("Average RL inference time")
+        self.training_timer = Timer("Average RL training time")
+
     def transition_added(self):
         self.data_since_last_q_training += 1
         if self.data_since_last_q_training >= self.q_train_interval:
@@ -152,9 +156,13 @@ class Training:
         self.batch_size = batch_size
 
     def train(self):
-        if self.parent.data_storage.transitions_count >= self.batch_size:
-            transitions = self.parent.data_storage.sample_batch(self.batch_size)
-            self.parent.q_network.train(transitions)
+        if self.parent.data_storage.transitions_count < self.batch_size:
+            return
+
+        self.parent.ml_monitor.training_timer.start()
+        transitions = self.parent.data_storage.sample_batch(self.batch_size)
+        self.parent.q_network.train(transitions)
+        self.parent.ml_monitor.training_timer.stop()
 
     def update_target_network(self):
         self.parent.q_network.update_target_network()
@@ -180,11 +188,19 @@ class QNetworkWorkerSelector(AbstractWorkerSelector):
         self.q_network = DoubleQNetwork(inputs_count=DataProcessor.state_size(simulation), actions_count=worker_count, **self.q_network_args)
         self.inference.set_model(self.q_network)
 
+    def end(self, simulation):
+        self.ml_monitor.inference_timer.print()
+        self.ml_monitor.training_timer.print()
+
     def select_worker(self, simulation, job) -> int:
+        self.ml_monitor.inference_timer.start()
+
         state = self.data_processor.get_state(simulation, job)
         worker_index = self.inference.select_action(state)
 
         self.data_storage.add_state(job, state)
         self.data_storage.add_action(job, worker_index)
+
+        self.ml_monitor.inference_timer.stop()
 
         return worker_index

@@ -84,6 +84,9 @@ class AbstractDurationPredictor(OnlineMLComponent, abc.ABC):
     def init(self, simulation: 'Simulation'):
         pass
 
+    def end(self, simulation: 'Simulation'):
+        pass
+
     @abc.abstractmethod
     def predict_duration(self, job) -> float:
         """Predict the duration of the given job."""
@@ -115,6 +118,9 @@ class AbstractBatchedDurationPredictor(AbstractDurationPredictor, abc.ABC):
 class AbstractWorkerSelector(OnlineMLComponent, abc.ABC):
 
     def init(self, simulation: 'Simulation'):
+        pass
+
+    def end(self, simulation: 'Simulation'):
         pass
 
     @abc.abstractmethod

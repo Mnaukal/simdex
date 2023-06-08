@@ -1,4 +1,7 @@
 import os
+
+from helpers import Timer
+
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # Disable GPU in TF. The models are small, so it is actually faster to use the CPU.
 import tensorflow as tf
@@ -133,6 +136,9 @@ class MLMonitor:
         self.parent = parent
         self.batch_size = batch_size
 
+        self.inference_timer = Timer("Average ML inference time")
+        self.training_timer = Timer("Average ML training time")
+
     def job_added(self, job):
         if self.parent.data_storage.job_count >= self.batch_size:
             self.parent.training.train()
@@ -147,6 +153,11 @@ class Training:
         self.batch_epochs = batch_epochs
 
     def train(self, original_model=None):
+        if self.parent.data_storage.job_count < self.batch_size:
+            return
+
+        self.parent.ml_monitor.training_timer.start()
+
         x, y = self.parent.data_storage.pop_batch()
 
         if original_model is None:
@@ -157,6 +168,8 @@ class Training:
         model.fit(x, y, batch_size=self.batch_size, epochs=self.batch_epochs, verbose=False)
 
         self.parent.ml_model_storage.save_model(model)
+
+        self.parent.ml_monitor.training_timer.stop()
 
 
 class MLModelStorage:
@@ -194,6 +207,10 @@ class NNDurationPredictor(AbstractBatchedDurationPredictor):
         self.ml_model_storage.save_model(initial_model)
         self.update_inference_model()
 
+    def end(self, simulation):
+        self.ml_monitor.inference_timer.print()
+        self.ml_monitor.training_timer.print()
+
     def _create_initial_model(self):
         return MLModel(None, **self.model_params)
 
@@ -206,5 +223,8 @@ class NNDurationPredictor(AbstractBatchedDurationPredictor):
         self.ml_monitor.job_added(job)
 
     def _predict_batch(self, jobs) -> list:
+        self.ml_monitor.inference_timer.start()
         x = self.data_processor.jobs_to_inputs(jobs)
-        return self.inference.predict_batch(x)
+        predictions = self.inference.predict_batch(x)
+        self.ml_monitor.inference_timer.stop()
+        return predictions
