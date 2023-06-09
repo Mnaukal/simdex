@@ -61,7 +61,7 @@ def main():
     # initialize the system
     configuration = get_configuration(args.config)
     if args.inference_batch_size is None:
-        args.inference_batch_size = configuration.get("inference_batch_size", 500)
+        args.inference_batch_size = configuration.get("inference_batch_size", 1)
     if args.output_folder is None:
         args.output_folder = configuration.get("output_folder", "../results/@@config")
     configuration["output_folder"] = create_output_folder(args)

@@ -96,8 +96,8 @@ class EmbeddingsDataProcessor(DataProcessor):
 class NNEmbeddingDurationPredictor(NNDurationPredictor):
     """Uses neural network regression model to predict the job duration. The model is implemented in TensorFlow."""
 
-    def __init__(self, layer_widths=[256], training_interval=1000, batch_size=1000, training_epochs=5, hash_converters=None, embedding_training_data=None, embedding_dim=100, embedding_batch_size=5000, embedding_training_epochs=20):
-        super().__init__(layer_widths, training_interval, batch_size, training_epochs)
+    def __init__(self, layer_widths=[256], training_interval=1000, batch_size=1000, training_epochs=5, hash_converters=None, embedding_training_data=None, embedding_dim=100, embedding_batch_size=5000, embedding_training_epochs=20, configuration=None):
+        super().__init__(layer_widths, training_interval, batch_size, training_epochs, configuration)
         self.model_params.update({
             'layer_widths': layer_widths,
             'hash_converters': hash_converters,

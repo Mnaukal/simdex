@@ -1,6 +1,9 @@
+import csv
 import pathlib
 from datetime import datetime, timedelta
 from typing import IO, Optional
+
+import numpy as np
 
 
 def _create_instance(instance_config, configuration: dict):
@@ -63,11 +66,13 @@ def create_component(class_name, constructor_args=None, configuration=None):
 
 class Timer:
 
-    def __init__(self, name):
+    def __init__(self, name, output_file=None):
         self.name = name
         self.total_time = timedelta()
         self.count = 0
         self.__start_time: datetime = ...
+        self.output_file = output_file
+        self.times = []
 
     def start(self):
         self.__start_time = datetime.now()
@@ -75,13 +80,31 @@ class Timer:
     def stop(self):
         end_time = datetime.now()
         self.count += 1
-        self.total_time += end_time - self.__start_time
+        time = end_time - self.__start_time
+        self.total_time += time
+
+        if self.output_file is not None:
+            self.times.append(time.total_seconds())
 
     def get_average_time(self):
         return (self.total_time / self.count).total_seconds()
 
     def print(self):
         log(f"{self.name}: {self.get_average_time()} s (count: {self.count}, total: {self.total_time.total_seconds()} s)")
+
+    def write(self):
+        if self.output_file is None:
+            return
+
+        with open(self.output_file, "w", newline='') as output_file:
+            csv_writer = csv.DictWriter(output_file, fieldnames=["count", "time", "avg_time"])
+            csv_writer.writeheader()
+            counts = np.arange(1, len(self.times) + 1)
+            avg_times = np.cumsum(self.times) / counts
+            csv_writer.writerows([
+                {"count": c, "time": f"{t:.6f}", "avg_time": f"{a:.6f}"}
+                for c, t, a in zip(counts, self.times, avg_times)
+            ])
 
 
 log_file: Optional[IO] = None

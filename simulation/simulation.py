@@ -50,7 +50,7 @@ class Simulation:
         self.ts = 0.0  # simulation time
         self.next_monitoring_ts = 0.0  # when the next System monitoring call is scheduled
 
-        self.dispatch_timer = Timer("Average dispatch time")
+        self.dispatch_timer = Timer("Dispatch time", configuration["output_folder"] / "dispatch_times.csv")
 
     def register_metrics(self, *metrics):
         """Additional metrics components may be registered via this method (mainly for debugging purposes)."""
@@ -148,6 +148,7 @@ class Simulation:
         self.__advance_time(end_ts + self.monitoring_period)
 
         self.dispatch_timer.print()
+        self.dispatch_timer.write()
         if self.duration_predictor:
             self.duration_predictor.end(self)
         if self.worker_selector:

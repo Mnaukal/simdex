@@ -28,6 +28,9 @@ class MLModel:
 
         self._compile()
 
+        # run the model once with a dummy input to initialize it
+        self.model(tf.zeros([1 if s is None else s for s in self.model.input_shape]))
+
     def _create_model(self, **model_params):
         layer_widths = model_params['layer_widths']
         all_inputs, encoded_features = self._prepare_inputs()
@@ -130,17 +133,20 @@ class SystemMonitor(AbstractSystemMonitor):
 
 class MLMonitor:
 
-    def __init__(self, parent: 'NNDurationPredictor', training_interval):
+    def __init__(self, parent: 'NNDurationPredictor', training_interval, configuration):
         self.parent = parent
         self.training_interval = training_interval
+        self.data_since_last_training = 0
 
-        self.inference_timer = Timer("Average ML inference time")
-        self.training_timer = Timer("Average ML training time")
+        self.inference_timer = Timer("ML Duration Predictor inference time", configuration["output_folder"] / "duration_predictor_inference_times.csv")
+        self.training_timer = Timer("ML Duration Predictor training time", configuration["output_folder"] / "duration_predictor_training_times.csv")
 
     def job_added(self, job):
-        if self.parent.data_storage.job_count >= self.training_interval:
+        self.data_since_last_training += 1
+        if self.data_since_last_training >= self.training_interval:
             self.parent.training.train()
             self.parent.update_inference_model()
+            self.data_since_last_training = 0
 
 
 class Training:
@@ -189,7 +195,7 @@ class NNDurationPredictor(AbstractBatchedDurationPredictor):
         super().__init__(configuration)
 
         self.system_monitor = SystemMonitor(self)
-        self.ml_monitor = MLMonitor(self, training_interval)
+        self.ml_monitor = MLMonitor(self, training_interval, configuration)
         self.data_processor = DataProcessor()
         self.training = Training(self, batch_size, training_epochs)
         self.ml_model_storage = MLModelStorage()
@@ -208,6 +214,8 @@ class NNDurationPredictor(AbstractBatchedDurationPredictor):
     def end(self, simulation):
         self.ml_monitor.inference_timer.print()
         self.ml_monitor.training_timer.print()
+        self.ml_monitor.inference_timer.write()
+        self.ml_monitor.training_timer.write()
 
     def _create_initial_model(self):
         return MLModel(None, **self.model_params)

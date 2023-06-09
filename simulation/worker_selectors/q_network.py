@@ -27,6 +27,10 @@ class DoubleQNetwork:
         self.gamma = gamma
         self.tau = tau
 
+        # run the model once with a dummy input to initialize it
+        self._network(tf.zeros([1 if s is None else s for s in self._network.input_shape]))
+        self._target_network(tf.zeros([1 if s is None else s for s in self._target_network.input_shape]))
+
     @staticmethod
     def _construct_model(inputs_count, actions_count, layer_widths, learning_rate) -> tf.keras.Model:
         input_layer = tf.keras.layers.Input(inputs_count)

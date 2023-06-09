@@ -131,13 +131,13 @@ class SystemMonitor(AbstractSystemMonitor):
 
 class MLMonitor:
 
-    def __init__(self, parent: 'QNetworkWorkerSelector', training_interval):
+    def __init__(self, parent: 'QNetworkWorkerSelector', training_interval, configuration):
         self.parent = parent
         self.training_interval = training_interval
         self.data_since_last_training = 0
 
-        self.inference_timer = Timer("Average RL inference time")
-        self.training_timer = Timer("Average RL training time")
+        self.inference_timer = Timer("RL Worker Selector inference time", configuration["output_folder"] / "worker_selector_inference_times.csv")
+        self.training_timer = Timer("RL Worker Selector training time", configuration["output_folder"] / "worker_selector_training_times.csv")
 
     def transition_added(self):
         self.data_since_last_training += 1
@@ -177,7 +177,7 @@ class QNetworkWorkerSelector(AbstractWorkerSelector):
         self.q_network: DoubleQNetwork = ...
 
         self.system_monitor = SystemMonitor(self)
-        self.ml_monitor = MLMonitor(self, training_interval)
+        self.ml_monitor = MLMonitor(self, training_interval, configuration)
         self.data_processor = DataProcessor()
         self.training = Training(self, batch_size)
         self.data_storage = DataStorage(self, replay_buffer_size)
@@ -191,6 +191,8 @@ class QNetworkWorkerSelector(AbstractWorkerSelector):
     def end(self, simulation):
         self.ml_monitor.inference_timer.print()
         self.ml_monitor.training_timer.print()
+        self.ml_monitor.inference_timer.write()
+        self.ml_monitor.training_timer.write()
 
     def select_worker(self, simulation, job) -> int:
         self.ml_monitor.inference_timer.start()
