@@ -1,5 +1,6 @@
 import sys
 
+from helpers import log
 from interfaces import AbstractMetricsCollector
 from jobs import JobDurationIndex
 
@@ -20,7 +21,7 @@ class UserExperienceMetricsCollector(AbstractMetricsCollector):
 
         return job.duration if job.compilation_ok else job.limits
 
-    def __init__(self, ref_jobs, thresholds=None):
+    def __init__(self, ref_jobs, thresholds=None, configuration=None):
         if thresholds is None:
             thresholds = [1.0, 2.0]
         if ref_jobs is None:
@@ -67,15 +68,15 @@ class UserExperienceMetricsCollector(AbstractMetricsCollector):
         return 100 * jobs // total
 
     def print(self, **kwargs):
-        print(f"Total jobs: {self.get_total_jobs()}, "
-              f"on time: {self.jobs_ontime} ({self.percentage_of_total_jobs(self.jobs_ontime)}%), "
-              f"delayed: {self.jobs_delayed} ({self.percentage_of_total_jobs(self.jobs_delayed)}%), "
-              f"late: {self.jobs_late} ({self.percentage_of_total_jobs(self.jobs_late)}%)")
+        log(f"Total jobs: {self.get_total_jobs()}, "
+            f"on time: {self.jobs_ontime} ({self.percentage_of_total_jobs(self.jobs_ontime)}%), "
+            f"delayed: {self.jobs_delayed} ({self.percentage_of_total_jobs(self.jobs_delayed)}%), "
+            f"late: {self.jobs_late} ({self.percentage_of_total_jobs(self.jobs_late)}%)")
 
 
 class UserExperienceMetricsCollectorWithHistory(UserExperienceMetricsCollector):
 
-    def __init__(self, ref_jobs, thresholds=None, history_step=None, print_progress=False):
+    def __init__(self, ref_jobs, thresholds=None, history_step=None, print_progress=False, configuration=None):
         super().__init__(ref_jobs, thresholds)
         self.history_step = history_step
         self.print_progress = print_progress
@@ -87,31 +88,31 @@ class UserExperienceMetricsCollectorWithHistory(UserExperienceMetricsCollector):
         if self.history_step is not None and self.get_total_jobs() % self.history_step == 0:
             self.log_history_step()
             if self.print_progress:
-                self.print_history_step(self.history[-1], self.history[-2] if len(self.history) >= 2 else (0, 0, 0, 0), file=sys.stderr)
+                print(self.get_history_step(self.history[-1], self.history[-2] if len(self.history) >= 2 else (0, 0, 0, 0)), file=sys.stderr)
 
     def log_history_step(self):
         total = self.get_total_jobs()
         self.history.append((total, self.jobs_ontime, self.jobs_delayed, self.jobs_late))
 
-    def print_history_step(self, step, previous=(0, 0, 0, 0), file=sys.stdout):
+    def get_history_step(self, step, previous=(0, 0, 0, 0), file=sys.stdout):
         (total, ontime, delayed, late) = step
         total_diff = total - previous[0]
         ontime_diff = ontime - previous[1]
         delayed_diff = delayed - previous[2]
         late_diff = late - previous[3]
-        print(f"{total:>6}, "
-              f"{ontime:>6}, {self.percentage_of_total_jobs(ontime, total):>3}, "
-              f"{delayed:>6}, {self.percentage_of_total_jobs(delayed, total):>3}, "
-              f"{late:>6}, {self.percentage_of_total_jobs(late, total):>3}, "
-              f"{ontime_diff:>6}, {self.percentage_of_total_jobs(ontime_diff, total_diff):>3}, "
-              f"{delayed_diff:>6}, {self.percentage_of_total_jobs(delayed_diff, total_diff):>3}, "
-              f"{late_diff:>6}, {self.percentage_of_total_jobs(late_diff, total_diff):>3}", file=file)
+        return (f"{total:>6}, "
+                f"{ontime:>6}, {self.percentage_of_total_jobs(ontime, total):>3}, "
+                f"{delayed:>6}, {self.percentage_of_total_jobs(delayed, total):>3}, "
+                f"{late:>6}, {self.percentage_of_total_jobs(late, total):>3}, "
+                f"{ontime_diff:>6}, {self.percentage_of_total_jobs(ontime_diff, total_diff):>3}, "
+                f"{delayed_diff:>6}, {self.percentage_of_total_jobs(delayed_diff, total_diff):>3}, "
+                f"{late_diff:>6}, {self.percentage_of_total_jobs(late_diff, total_diff):>3}")
 
     def print_history(self):
-        print(" TOTAL,  ONTIME   %, DELAYED   %,    LATE   %, DIFF_ON   %, DIFF_DE   %, DIFF_LA   %")
+        log(" TOTAL,  ONTIME   %, DELAYED   %,    LATE   %, DIFF_ON   %, DIFF_DE   %, DIFF_LA   %")
         last = (0, 0, 0, 0)
         for row in self.history:
-            self.print_history_step(row, last)
+            log(self.get_history_step(row, last))
             last = row
 
     def print(self, **kwargs):

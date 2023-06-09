@@ -170,8 +170,8 @@ class Training:
 
 class QNetworkWorkerSelector(AbstractWorkerSelector):
 
-    def __init__(self, epsilon_initial=0.3, epsilon_final=0.01, epsilon_final_after_jobs=10_000, batch_size=64, replay_buffer_size=50_000, training_interval=1, **q_network_args):
-        super().__init__()
+    def __init__(self, epsilon_initial=0.3, epsilon_final=0.01, epsilon_final_after_jobs=10_000, batch_size=64, replay_buffer_size=50_000, training_interval=1, configuration=None, **q_network_args):
+        super().__init__(configuration)
 
         self.q_network_args = q_network_args
         self.q_network: DoubleQNetwork = ...

@@ -185,8 +185,8 @@ class MLModelStorage:
 class NNDurationPredictor(AbstractBatchedDurationPredictor):
     """Uses neural network regression model to predict the job duration. The model is implemented in TensorFlow."""
 
-    def __init__(self, layer_widths=[256], training_interval=1000, batch_size=1000, training_epochs=5):
-        super().__init__()
+    def __init__(self, layer_widths=[256], training_interval=1000, batch_size=1000, training_epochs=5, configuration=None):
+        super().__init__(configuration)
 
         self.system_monitor = SystemMonitor(self)
         self.ml_monitor = MLMonitor(self, training_interval)

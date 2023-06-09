@@ -3,15 +3,17 @@
 import sys
 import argparse
 from datetime import datetime
+from pathlib import Path
 
 import ruamel.yaml as yaml
 
+from helpers import init_log, log_with_time, log, close_log
 from interfaces import AbstractBatchedDurationPredictor
 from jobs import JobReader, RefJobReader, HashConverter
 from simulation import Simulation
 
 
-def get_configuration(config_file):
+def get_configuration(config_file) -> dict:
     with open(config_file, "r") as stream:
         try:
             return yaml.safe_load(stream)
@@ -29,7 +31,19 @@ def load_reference_jobs(path, converters):
     return jobs
 
 
-if __name__ == "__main__":
+def create_output_folder(args):
+    output_folder = args.output_folder
+    if "@@config" in output_folder:
+        config_file = Path(args.config)
+        output_folder = output_folder.replace("@@config", config_file.stem)
+    if "@@datetime" in output_folder:
+        output_folder = output_folder.replace("@@datetime", datetime.now().strftime("%Y%m%d_%H%M%S"))
+    output_folder = Path(output_folder)
+    output_folder.mkdir(parents=True, exist_ok=True)
+    return output_folder
+
+
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("input_file", type=str, help="Path to the input .csv or .csv.gz file with jobs log.")
     parser.add_argument("--limit", type=int, default=1000000000,
@@ -41,29 +55,33 @@ if __name__ == "__main__":
                         help="If present, progress visualization is on.")
     parser.add_argument("--inference_batch_size", type=int,
                         help="Perform the ML-based prediction for a batch of jobs at the same time to improve performance.")
+    parser.add_argument("--output_folder", type=str, help="Folder where the output will be saved. '@@config' will be replaced by the name of the config file, '@@datetime' will be replaced by the current date and time.")
     args = parser.parse_args()
 
     # initialize the system
     configuration = get_configuration(args.config)
     if args.inference_batch_size is None:
         args.inference_batch_size = configuration.get("inference_batch_size", 500)
-    hash_converters = {
+    if args.output_folder is None:
+        args.output_folder = configuration.get("output_folder", "../results/@@config")
+    configuration["output_folder"] = create_output_folder(args)
+    init_log(configuration["output_folder"])
+    configuration["hash_converters"] = {
         "solution_id": HashConverter(),
         "group_id": HashConverter(),
         "tlgroup_id": HashConverter(),
         "exercise_id": HashConverter(),
         "runtime_id": HashConverter(),
     }
-    ref_jobs = load_reference_jobs(args.refs, hash_converters) if args.refs else None
-    simulation = Simulation(configuration, ref_jobs, hash_converters)
+    configuration["ref_jobs"] = load_reference_jobs(args.refs, configuration["hash_converters"]) if args.refs else None
+    simulation = Simulation(configuration)
 
-    reader = JobReader(converters=hash_converters)
+    reader = JobReader(converters=configuration["hash_converters"])
     reader.open(args.input_file)
 
     simulation_start_time = datetime.now()
     if args.progress:
-        sys.stdout.write(f"Simulation started {simulation_start_time}\n")
-        sys.stdout.flush()
+        log_with_time("Simulation started")
 
     # read data and run the simulation
     limit = args.limit
@@ -112,11 +130,15 @@ if __name__ == "__main__":
 
     simulation_end_time = datetime.now()
     if args.progress:
-        sys.stdout.write(f"Simulation finished: {simulation_end_time}\n")
-        sys.stdout.flush()
-    sys.stdout.write(f"Simulation duration: {simulation_end_time - simulation_start_time}\n")
-    sys.stdout.flush()
+        log_with_time("Simulation finished")
+    log(f"Simulation duration: {simulation_end_time - simulation_start_time}\n")
 
     # print out measured statistics
     for metric in simulation.metrics:
         metric.print()
+
+    close_log()
+
+
+if __name__ == "__main__":
+    main()

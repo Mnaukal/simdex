@@ -1,3 +1,4 @@
 /.not-versioned
 __pycache__
 /simulation/.vscode
+/results/

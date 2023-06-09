@@ -1,10 +1,13 @@
 import numpy as np
+
+from helpers import log
 from interfaces import AbstractMetricsCollector
+
 
 class JobDelayQuantilesCollector(AbstractMetricsCollector):
     """Metrics collector that computes quantiles of job delays for all jobs."""
 
-    def __init__(self, quantiles=None):
+    def __init__(self, quantiles=None, configuration=None):
         if quantiles is None:
             self.quantiles = [0.5, 0.9, 0.95, 0.98, 0.99, 0.995, 0.999]
         self.job_delays = []
@@ -15,11 +18,11 @@ class JobDelayQuantilesCollector(AbstractMetricsCollector):
         self.job_delays.append(delay)
         self.jobs += 1
 
-    def print(self):
+    def print(self, **kwargs):
         q_width = max([len(str(q)) for q in self.quantiles])
-        print("Delay quantiles:")
+        log("Delay quantiles:")
         for q, r in zip(self.quantiles, self.compute_quantiles()):
-            print(f"    {q:<{q_width}}: {r:.2f}")
+            log(f"    {q:<{q_width}}: {r:.2f}")
 
     def get_jobs(self):
         return self.jobs

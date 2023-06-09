@@ -1,6 +1,4 @@
 import os
-from datetime import datetime
-
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # Disable GPU in TF. The models are small, so it is actually faster to use the CPU.
 import tensorflow as tf
@@ -8,6 +6,7 @@ import tensorflow as tf
 from duration_predictors.nn_duration_predictor import NNDurationPredictor, MLModel, DataProcessor
 from constants import RUNTIME_ID_COUNT, EXERCISE_ID_COUNT, TL_GROUP_COUNT
 from jobs import ReaderBase
+from helpers import log_with_time
 
 
 class EmbeddingsMLModel(MLModel):
@@ -78,13 +77,13 @@ class EmbeddingsMLModel(MLModel):
             tf.convert_to_tensor([job['exercise_id'] for job in jobs], dtype=tf.int32),
             tf.convert_to_tensor([job['tlgroup_id'] for job in jobs], dtype=tf.int32)
         )
-        print("Training embeddings...")
+        log_with_time("Training embeddings...")
         self.embedding_model.fit(x, y,
                                  batch_size=self.embedding_batch_size,
                                  epochs=self.embedding_training_epochs,
                                  verbose=2)
         self.embedding_layer.trainable = False
-        print(f"Embeddings training done. {datetime.now()}")
+        log_with_time("Embeddings training done.")
 
 
 class EmbeddingsDataProcessor(DataProcessor):

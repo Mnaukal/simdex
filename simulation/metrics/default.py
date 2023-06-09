@@ -1,10 +1,11 @@
+from helpers import log
 from interfaces import AbstractMetricsCollector
 
 
 class PowerMetricsCollector(AbstractMetricsCollector):
     """Metrics collector that computes total uptime of all workers (i.e., power consumption)."""
 
-    def __init__(self):
+    def __init__(self, configuration=None):
         self.last_ts = None
         self.period = 0.0  # measured period of time
         self.uptime = 0.0  # total sum of time when servers were up
@@ -17,8 +18,8 @@ class PowerMetricsCollector(AbstractMetricsCollector):
             self.uptime += dt * float(active_workers)
         self.last_ts = ts
 
-    def print(self):
-        print("Simulation time: {} s, relative workers uptime: {}".format(
+    def print(self, **kwargs):
+        log("Simulation time: {} s, relative workers uptime: {}".format(
             self.get_measured_period(), self.get_relative_uptime()))
 
     def get_measured_period(self):
@@ -33,7 +34,7 @@ class PowerMetricsCollector(AbstractMetricsCollector):
 class JobDelayMetricsCollector(AbstractMetricsCollector):
     """Metrics collector that computes basic delay statistics (average, maximum) for all jobs."""
 
-    def __init__(self):
+    def __init__(self, configuration=None):
         self.jobs = 0
         self.total_delay = 0.0
         self.max_delay = 0.0
@@ -44,8 +45,8 @@ class JobDelayMetricsCollector(AbstractMetricsCollector):
         self.max_delay = max(self.max_delay, delay)
         self.jobs += 1
 
-    def print(self):
-        print("Total jobs: {}, avg. delay: {}, max. delay: {}".format(
+    def print(self, **kwargs):
+        log("Total jobs: {}, avg. delay: {}, max. delay: {}".format(
             self.get_jobs(), self.get_avg_delay(), self.get_max_delay()))
 
     def get_jobs(self):

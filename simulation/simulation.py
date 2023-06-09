@@ -8,28 +8,28 @@ from interfaces import AbstractDispatcher, AbstractDurationPredictor, AbstractWo
 class Simulation:
     """Main simulation class. Wraps the algorithm and acts as component container."""
 
-    def __init__(self, configuration, ref_jobs, hash_converters):
+    def __init__(self, configuration: dict):
         # load parameters from configuration and instantiate necessary components
-        self.ref_jobs = ref_jobs[:]
+        self.ref_jobs = configuration["ref_jobs"][:]
         self.ref_jobs.reverse()
 
         # metrics
         self.metrics = []
         if "metrics" in configuration:
             for metric in configuration["metrics"]:
-                self.metrics.append(_create_instance(metric, ref_jobs, hash_converters))
+                self.metrics.append(_create_instance(metric, configuration))
 
         # dispatcher
-        self.dispatcher: AbstractDispatcher = _create_instance(configuration["dispatcher"], ref_jobs, hash_converters)
+        self.dispatcher: AbstractDispatcher = _create_instance(configuration["dispatcher"], configuration)
 
         # ML and RL predictors
         self.duration_predictor: Optional[AbstractDurationPredictor] = None
         if "duration_predictor" in configuration:
-            self.duration_predictor: AbstractDurationPredictor = _create_instance(configuration["duration_predictor"], ref_jobs, hash_converters)
+            self.duration_predictor: AbstractDurationPredictor = _create_instance(configuration["duration_predictor"], configuration)
 
         self.worker_selector: Optional[AbstractWorkerSelector] = None
         if "worker_selector" in configuration:
-            self.worker_selector: AbstractWorkerSelector = _create_instance(configuration["worker_selector"], ref_jobs, hash_converters)
+            self.worker_selector: AbstractWorkerSelector = _create_instance(configuration["worker_selector"], configuration)
 
         # how often System monitoring is called to update the ML models (in seconds)
         self.monitoring_period = float(configuration["period"]) if "period" in configuration else 60.0  # one minute is default
