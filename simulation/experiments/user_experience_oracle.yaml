@@ -32,6 +32,8 @@ metrics:
   - metrics.quantile.JobDelayQuantilesCollector
   - class: metrics.user_experience.UserExperienceMetricsCollectorWithHistory
     args:
-      - "@@ref_jobs"
-      - [ 1.5, 3.0 ]  # thresholds
-      - 10000  # history step
+      ref_jobs: "@@ref_jobs"
+      thresholds: [ 1.5, 3.0 ]
+#      history_step: 10_000
+      history_step: 100_000  # history step
+#      print_progress: True
