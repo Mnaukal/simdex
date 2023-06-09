@@ -15,8 +15,8 @@ class StatisticalDurationPredictor(AbstractDurationPredictor):
         def ref_job_done(self, simulation, ref_job):
             self.parent.duration_index.add(ref_job)
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, configuration):
+        super().__init__(configuration)
         self.duration_index = JobDurationIndex()
 
     def _init_system_monitor(self):

@@ -90,7 +90,7 @@ class Timer:
         return (self.total_time / self.count).total_seconds()
 
     def print(self):
-        log(f"{self.name}: {self.get_average_time()} s (count: {self.count}, total: {self.total_time.total_seconds()} s)")
+        log(f"{self.name}: {self.get_average_time():.6f} s (count: {self.count}, total: {self.total_time.total_seconds():.6f} s)")
 
     def write(self):
         if self.output_file is None:

@@ -80,8 +80,7 @@ def main():
     reader.open(args.input_file)
 
     simulation_start_time = datetime.now()
-    if args.progress:
-        log_with_time("Simulation started")
+    log_with_time("Simulation started")
 
     # read data and run the simulation
     limit = args.limit
@@ -129,8 +128,7 @@ def main():
     reader.close()
 
     simulation_end_time = datetime.now()
-    if args.progress:
-        log_with_time("Simulation finished")
+    log_with_time("Simulation finished")
     log(f"Simulation duration: {simulation_end_time - simulation_start_time}\n")
 
     # print out measured statistics
