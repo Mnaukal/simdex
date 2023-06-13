@@ -3,6 +3,7 @@ import pathlib
 from datetime import datetime, timedelta
 from typing import IO, Optional
 
+import random
 import numpy as np
 
 
@@ -128,3 +129,10 @@ def log(message):
 def log_with_time(message):
     print(f"{datetime.now()}: {message}")
     print(f"{datetime.now()}: {message}", file=log_file)
+
+
+def set_random_seed(seed: int):
+    import os
+    os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
+    import tensorflow as tf
+    tf.keras.utils.set_random_seed(seed)

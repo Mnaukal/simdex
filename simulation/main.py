@@ -7,7 +7,7 @@ from pathlib import Path
 
 import ruamel.yaml as yaml
 
-from helpers import init_log, log_with_time, log, close_log
+from helpers import init_log, log_with_time, log, close_log, set_random_seed
 from interfaces import AbstractBatchedDurationPredictor
 from jobs import JobReader, RefJobReader, HashConverter
 from simulation import Simulation
@@ -36,6 +36,8 @@ def create_output_folder(args):
     if "@@config" in output_folder:
         config_file = Path(args.config)
         output_folder = output_folder.replace("@@config", config_file.stem)
+    if "@@seed" in output_folder:
+        output_folder = output_folder.replace("@@seed", str(args.seed))
     if "@@datetime" in output_folder:
         output_folder = output_folder.replace("@@datetime", datetime.now().strftime("%Y%m%d_%H%M%S"))
     output_folder = Path(output_folder)
@@ -55,15 +57,17 @@ def main():
                         help="If present, progress visualization is on.")
     parser.add_argument("--inference_batch_size", type=int,
                         help="Perform the ML-based prediction for a batch of jobs at the same time to improve performance.")
-    parser.add_argument("--output_folder", type=str, help="Folder where the output will be saved. '@@config' will be replaced by the name of the config file, '@@datetime' will be replaced by the current date and time.")
+    parser.add_argument("--seed", type=int, default=42, help="Seed for the random generator.")
+    parser.add_argument("--output_folder", type=str, help="Folder where the output will be saved. '@@config' will be replaced by the name of the config file, '@@datetime' will be replaced by the current date and time, '@@seed' will be replaced with the random generator seed.")
     args = parser.parse_args()
 
     # initialize the system
+    set_random_seed(args.seed)
     configuration = get_configuration(args.config)
     if args.inference_batch_size is None:
         args.inference_batch_size = configuration.get("inference_batch_size", 1)
     if args.output_folder is None:
-        args.output_folder = configuration.get("output_folder", "../results/@@config")
+        args.output_folder = configuration.get("output_folder", "../results/@@config_@@seed")
     configuration["output_folder"] = create_output_folder(args)
     init_log(configuration["output_folder"])
     configuration["hash_converters"] = {

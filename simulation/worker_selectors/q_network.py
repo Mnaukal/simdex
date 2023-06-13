@@ -7,7 +7,6 @@ import tensorflow as tf
 import numpy as np
 
 try:
-    tf.keras.utils.set_random_seed(42)
     tf.config.threading.set_inter_op_parallelism_threads(4)
     tf.config.threading.set_intra_op_parallelism_threads(4)
 except RuntimeError:  # "Inter op parallelism cannot be modified after initialization."

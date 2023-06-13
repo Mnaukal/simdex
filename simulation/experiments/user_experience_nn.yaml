@@ -25,7 +25,7 @@ dispatcher: dispatchers.DurationFilterDispatcher
 duration_predictor:
   class: duration_predictors.nn_duration_predictor.NNDurationPredictor
   args:
-    layer_widths: [ 1024 ]  # each value represents a width of one hidden layer
+    layer_widths: [ 512, 256 ]  # each value represents a width of one hidden layer
     training_interval: 500
     batch_size: 1000
     training_epochs: 5
