@@ -3,7 +3,6 @@ import pathlib
 from datetime import datetime, timedelta
 from typing import IO, Optional
 
-import random
 import numpy as np
 
 

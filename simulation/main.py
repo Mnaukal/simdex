@@ -23,6 +23,11 @@ def get_configuration(config_file) -> dict:
             exit()
 
 
+def save_configuration(config_file, configuration):
+    with open(config_file, "w") as stream:
+        yaml.dump(configuration, stream, default_flow_style=False)
+
+
 def load_reference_jobs(path, converters):
     reader = RefJobReader(converters=converters)
     reader.open(path)
@@ -69,6 +74,9 @@ def main():
     if args.output_folder is None:
         args.output_folder = configuration.get("output_folder", "../results/@@config_@@seed")
     configuration["output_folder"] = create_output_folder(args)
+    configuration["args"] = args.__dict__
+    save_configuration(configuration["output_folder"] / "config.yaml", configuration)
+
     init_log(configuration["output_folder"])
     configuration["hash_converters"] = {
         "solution_id": HashConverter(),
@@ -132,14 +140,19 @@ def main():
     reader.close()
 
     simulation_end_time = datetime.now()
+    simulation_duration = simulation_end_time - simulation_start_time
     log_with_time("Simulation finished")
-    log(f"Simulation duration: {simulation_end_time - simulation_start_time}\n")
+    log(f"Simulation duration: {simulation_duration}\n")
 
     # print out measured statistics
     for metric in simulation.metrics:
         metric.print()
 
     close_log()
+
+    # save the results for the June 2023 paper
+    from results import save_results
+    save_results(configuration["output_folder"] / "results.yaml", simulation, simulation_duration)
 
 
 if __name__ == "__main__":
