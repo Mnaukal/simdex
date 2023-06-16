@@ -12,9 +12,7 @@
 workers:
   - active: true
   - active: true
-    limit: 30.0
   - active: true
-    limit: 30.0
   - active: true
     limit: 30.0
 

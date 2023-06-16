@@ -1,6 +1,6 @@
 import os
 
-from helpers import Timer
+from helpers import Timer, log_with_time
 
 os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by default
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # Disable GPU in TF. The models are small, so it is actually faster to use the CPU.
@@ -44,8 +44,8 @@ class MLModel:
         return model
 
     def _compile(self):
-        learning_rate = tf.keras.experimental.CosineDecay(0.01, 10000000)
-        self.model.compile(optimizer=tf.optimizers.Adam(learning_rate=learning_rate), loss=tf.losses.Poisson())
+        learning_rate = tf.keras.experimental.CosineDecay(0.01, 10_000_000)
+        self.model.compile(optimizer=tf.optimizers.Adam(learning_rate=learning_rate), loss=tf.losses.Poisson(), metrics=['mse'])
         # model.summary()
 
     def _prepare_inputs(self):
@@ -64,7 +64,7 @@ class MLModel:
         return lambda feature: tf.one_hot(feature, size + 1)  # +1 since classes are labeled from 1
 
     def fit(self, x, y, **kwargs):
-        self.model.fit(x, y, **kwargs)
+        return self.model.fit(x, y, **kwargs)
 
     def predict(self, x, **kwargs) -> list:
         return self.model(x, **kwargs).numpy()
@@ -169,7 +169,8 @@ class Training:
 
         model = MLModel(original_model)
 
-        model.fit(x, y, batch_size=self.batch_size, epochs=self.training_epochs, verbose=False)
+        history = model.fit(x, y, batch_size=self.batch_size, epochs=self.training_epochs, verbose=False)
+        # log_with_time(f"Training done. MSE: {[f'{e:.2f}' for e in history.history['mse']]}")
 
         self.parent.ml_model_storage.save_model(model)
 

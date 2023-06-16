@@ -4,15 +4,13 @@
 # take no more than given limit are allowed in (all queues remain active the whole time).
 # The key part of the scenario is the duration estimation algorithm used by dispatcher.
 
-# This configuration uses job dispatcher and SA strategy that estimates job duration
-# based on previous jobs (including ref. jobs). The SA fills an index (estimation structure),
-# dispatcher uses the duration index to make the estimates.
-
+# This baseline configuration uses only a job dispatcher (no SA) that estimates job duration
+# based on the job limits.
 
 # Workers could be either a number or a list that explicitly states a collection of attributes
 # If only a number is given, the workers are initialized with no attributes at the beginning.
 workers:
-  - active: true
+  - active: true # first worker has no limit
   - active: true
   - active: true
   - active: true
@@ -22,9 +20,7 @@ workers:
 # where class is fully qualified class name and args is list or dict holding constructor arguments
 dispatcher: dispatchers.DurationFilterDispatcher
 
-duration_predictor: duration_predictors.statistical_duration_predictor.StatisticalDurationPredictor
-
-period: 60  # in seconds, how often a sa strategy (MAPE-K loop) is invoked
+duration_predictor: duration_predictors.zero_duration_predictor.ZeroDurationPredictor
 
 # list of metric components (each one is in the same format as dispatcher)
 metrics:

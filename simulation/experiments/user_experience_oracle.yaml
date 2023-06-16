@@ -14,9 +14,7 @@
 workers:
   - active: true # first worker has no limit
   - active: true
-    limit: 30.0
   - active: true
-    limit: 30.0
   - active: true
     limit: 30.0
 
