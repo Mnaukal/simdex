@@ -1,3 +1,5 @@
+from jobs import Job
+
 
 class WorkerQueue:
     """Main abstraction that represents jobs waiting for a particular worker.
@@ -8,7 +10,7 @@ class WorkerQueue:
 
     def __init__(self, **attributes):
         """The constructor gets initial attributes as named parameters."""
-        self.jobs = []
+        self.jobs: list[Job] = []
         self.attributes = attributes
 
     def get_attribute(self, name):

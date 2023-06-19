@@ -1,4 +1,5 @@
 from interfaces import AbstractDispatcher
+from workers import WorkerQueue
 
 
 class DurationFilterDispatcher(AbstractDispatcher):
@@ -15,6 +16,7 @@ class DurationFilterDispatcher(AbstractDispatcher):
     def dispatch(self, job, workers, simulation):
         # we need to estimate the duration of the job first (! no peeking to job.duration !)
         estimate = simulation.duration_predictor.predict_duration(job)
+        job.estimated_duration = estimate
 
         # get all workers marked as active
         active_workers = list(filter(lambda w: w.get_attribute("active"), workers))
@@ -26,8 +28,14 @@ class DurationFilterDispatcher(AbstractDispatcher):
         if not best_workers:
             best_workers = active_workers  # fallback, if no worker passes the limit
 
-        best_workers.sort(key=lambda w: w.jobs_count())  # TODO: use estimated duration instead of number of jobs
-        target = best_workers[0]
+        def queue_length(worker: WorkerQueue):
+            return worker.jobs_count()
+
+        def queue_duration(worker: WorkerQueue):
+            return sum(j.estimated_duration for j in worker.jobs)
+
+        target = min(best_workers, key=queue_length)
+        # target = min(best_workers, key=queue_duration)
         target.enqueue(job)
 
 
