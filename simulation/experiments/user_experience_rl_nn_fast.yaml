@@ -1,48 +1,50 @@
-# TODO: Scenario where user experience based on job latency is the top criterium.
-# Short jobs needs to be evaluated almost interactively, long jobs may be delayed much longer.
-# The objective is achieved by imposing limits on queues, only jobs that are expected to
-# take no more than given limit are allowed in (all queues remain active the whole time).
-# The key part of the scenario is the duration estimation algorithm used by dispatcher.
-
-# This configuration uses dispatcher and SA strategy based on neural-network regression estimator.
+# This configuration uses a neural-network regression estimator for the duration predictor.
 # The NN is trained in batches of incoming jobs as the simulation progresses.
+# For the dispatching, a RL algorithm (Deep Q-Network) is used.
 
-# Workers could be either a number or a list that explicitly states a collection of attributes
+# Workers could be either a number or a list that explicitly states a collection of attributes.
 # If only a number is given, the workers are initialized with no attributes at the beginning.
+# We want all the workers to be 'active'
 workers:
   - active: true
   - active: true
   - active: true
   - active: true
 
-# dispatcher component: either a string (fully qualified class name) or a collection with { class, args }
-# where class is fully qualified class name and args is list or dict holding constructor arguments
+# Dispatcher component: either a string (fully qualified class name) or a collection with { class, args }
+# where class is fully qualified class name and args is list or dict holding constructor arguments.
+# The class should implement the `AbstractDispatcher` interface
 dispatcher: dispatchers.WorkerSelectorDispatcher
 
+# Worker selector: same format as the dispatcher.
+# The class should implement the `AbstractWorkerSelector` interface
+# Detailed description of the architecture of the `QNetworkWorkerSelector` is available in the paper.
 worker_selector:
   class: worker_selectors.q_network_worker_selector.QNetworkWorkerSelector
   args:
-    # inference
+    # inference -- epsilon-greedy action selecting with linear interpolation of epsilon
     epsilon_initial: 0.3
     epsilon_final: 0.001
     epsilon_final_after_jobs: 25_000
     # training
-    layer_widths: [70]  # each value represents a width of one hidden layer
-    replay_buffer_size: 100_000
-    gamma: 0.8
+    layer_widths: [ 70 ]  # each value represents a width of one hidden layer
+    replay_buffer_size: 100_000  # the number of transitions saved in the replay buffer
+    gamma: 0.8  # discount factor for the Q-learning
     training_interval: 100  # number of jobs between training of the Q network
-    batch_size: 1000
+    batch_size: 1000  # number of transitions used for each training
 
-# duration predictor component (same format as dispatcher)
+# Duration predictor: same format as the dispatcher.
+# The class should implement the `AbstractDurationPredictor`
+# Detailed description of the architecture of the `NNDurationPredictor` is available in the paper.
 duration_predictor:
   class: duration_predictors.nn_duration_predictor.NNDurationPredictor
   args:
     layer_widths: [ 512, 256 ]  # each value represents a width of one hidden layer
-    training_interval: 500
-    batch_size: 1000
-    training_epochs: 5
+    training_interval: 500  # how often to train (in number of jobs)
+    batch_size: 1000  # training batch size (most recent jobs)
+    training_epochs: 5  # number of epochs in each training
 
-period: 604800  # in seconds, how often a sa strategy (MAPE-K loop) is invoked
+period: 604800  # in seconds, how often a periodic monitoring is invoked. In `QNetworkWorkerSelector`, the target network is updated periodically.
 
 # list of metric components (each one is in the same format as dispatcher)
 metrics:
@@ -53,5 +55,5 @@ metrics:
       ref_jobs: "@@ref_jobs"
       thresholds: [ 1.5, 3.0 ]
 #      history_step: 10_000
-      history_step: 100_000  # history step
+      history_step: 100_000
 #      print_progress: True

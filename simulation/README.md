@@ -1,13 +1,16 @@
 # ReCodEx Backend Simulator
 
-This readme presents some internal details of the Simdex, a simulator of [ReCodEx](https://github.com/recodex) backend that replays its [compiled workload logs](https://github.com/smartarch/simdex/tree/main/data). For details on how to execute the `main.py` script, please refer to the [main project readme](https://github.com/smartarch/simdex#getting-started).
+This readme presents some internal details of the Simdex, a simulator of [ReCodEx](https://github.com/recodex) backend that replays its [compiled workload logs](../data). For details on how to execute the `main.py` script, please refer to the [main project readme](../README.md#getting-started).
 
+## Scenario
+
+The simulated scenario is rather simple. ReCodEx is a system where students submit their solutions for coding assignments and the backend of the system evaluates them by compiling the submitted code and running a battery of tests on it in a sophisticated sandbox. Each submitted solution becomes a backend job that is assigned to one of the worker servers performing the evaluation. Each worker has a queue in which the jobs are waiting since a worker can only evaluate one job at a time. Jobs are assigned to queues immediately as they are spawned by the job dispatcher and cannot be reassigned later.
 
 ## Overview
 
-The simulator algorithm is wrapped in the `Simulation` class in [`simulation.py`](https://github.com/smartarch/simdex/blob/main/simulation/simulation.py). It expects to be called (its public routine `run`) once for each job by the main loop and then with `job=None` at the end. The simulation class is also responsible for assembling the simulation components from the configuration Yaml file.
+The simulator algorithm is wrapped in the `Simulation` class in [`simulation.py`](simulation.py). It expects to be called (its public method `run_job`) once for each job by the main loop. Then, the `end` method is called to end the simulation. The simulation class is also responsible for assembling the simulation components from the configuration Yaml file.
 
-Each job is represented by an instance of the `Job` data class (reference solution jobs use the `RefJob` data class). All necessary helper tools for loading data and handling the jobs are in [`jobs.py`](https://github.com/smartarch/simdex/blob/main/simulation/jobs.py). Please note that the readers are built to read jobs one by one (the reader implements an iterator interface), so the whole dataset does not have to be present in memory. On the other hand, this requires that simulated datasets are sorted by the job spawning time.
+Each job is represented by an instance of the `Job` data class (reference solution jobs use the `RefJob` data class). All necessary helper tools for loading data and handling the jobs are in [`jobs.py`](jobs.py). Please note that the readers are built to read jobs one by one (the reader implements an iterator interface), so the whole dataset does not have to be present in memory. On the other hand, this requires that simulated datasets are sorted by the job spawning time.
 
 ### Workers and Queues
 
@@ -31,108 +34,59 @@ def jobs_count(self):
 ```
 will return the number of jobs actually present in the queue (including the front job, which is currently "*running*").
 
+### Dispatchers
 
-### Implemented experiments
+The decision to which queue should a job be scheduled is done by a dispatcher.
 
-As an example, we provide two scenarios with 7 configurations (`.yaml` files) prepared to be launched.
-
-The **simple** scenario is based on the assumption that the workers can be suspended when the system is underutilized to save power. It uses only the worker queue attributes (namely the `active` attribute) to control, which workers are running and which are suspended. At least one worker needs to be running at all times.
-
-- [`simple-no-sa-1worker.yaml`](https://github.com/smartarch/simdex/blob/main/simulation/experiments/simple-no-sa-1worker.yaml) -- baseline with no self-adaptation (using single worker the whole time)
-- [`simple-no-sa-4worker.yaml`](https://github.com/smartarch/simdex/blob/main/simulation/experiments/simple-no-sa-4worker.yaml) -- baseline with no self-adaptation (using 4 workers the whole time)
-- [`simple-self-adaptive.yaml`](https://github.com/smartarch/simdex/blob/main/simulation/experiments/simple-self-adaptive.yaml) -- self-adaptive strategy that de/activates workers (1 to 4) based on the number of jobs in the queues. If there is at least one queue with more than 1 job and at least one worker is not running, it is activated. Otherwise, it there are at least two active empty queues, one of them is deactivated.
-
-All configurations of this scenario are evaluated by `PowerMetricsCollector` and `JobDelayMetricsCollector` (see below).
-
-
-The **user_experience** scenario demonstrates application of machine learning. It applies self-adaptive strategy to improve user experience regarding the latency of the jobs. The main assumption is that short jobs should be evaluated interactively whilst long-running jobs may be delayed since the user will not wait for them anyway.
-
-The dispatcher tries to estimate the duration of each job and place them into appropriate queue. Three queues are dedicated for jobs that are assumed to take less than `30s`, the fourth queue is open for all jobs. If more than one queue is appropriate for a job, the shortest one (with the least jobs) is used.
-
-The self-adaptive strategy does not alter the configuration of the queues, but only adjusts the model used for predicting job durations.
-
-- [`user_experience-no-sa.yaml`](https://github.com/smartarch/simdex/blob/main/simulation/experiments/user_experience-no-sa.yaml) -- baseline without self-adaptive module; uses half of the job time limits as the duration estimate
-- [`user_experience-oracle.yaml`](https://github.com/smartarch/simdex/blob/main/simulation/experiments/user_experience-oracle.yaml) -- special baseline that violates simulation causality (uses the actual duration as a prediction); this simulates the ultimate oracle that could precisely predict all the jobs accurately (i.e., the theoretical limit of this scenario)
-- [`user_experience.yaml`](https://github.com/smartarch/simdex/blob/main/simulation/experiments/user_experience.yaml) -- self-adaptive approach that employs simple statistical model; computes an average of durations of past jobs (categorized by exercise ID and runtime ID)
-- [`user_experience_nn.yaml`](https://github.com/smartarch/simdex/blob/main/simulation/experiments/user_experience_nn.yaml) -- self-adaptive approach that integrates [TensorFlow](https://www.tensorflow.org/) and implements the estimator using simple neural network (as a regression predictor)
-
-All configurations of this scenario are evaluated by `JobDelayMetricsCollector` and `UserExperienceMetricsCollector` (see below).
-
-
-### Predefined metrics
-
-There are three predefined metric collectors
-
-`PowerMetricsCollector` (default module) -- computes total time the queues were active (i.e., power consumption of the workers); it is printed out as relative value (1.0 = one worker queue was active on average)
-
-`JobDelayMetricsCollector` (default module) -- computes average and maximal job delay
-
-`UserExperienceMetricsCollector` (user_experience module) -- computes user experience by dividing jobs into three categories:
-- *on time* -- minimal or no delay
-- *delayed* -- noticeable, yet still acceptable delay
-- *late* -- significant (potentially problematic) delay
-
-The output is three numbers -- how many of the jobs felt into each category. The categories are based on duration estimates and multiplication constants (e.g., if job delay is less than `1.5x` its expected duration, it is considered on time). The expected durations are computed from reference solutions jobs (i.e., the `--refs` option must be used when executing the experiment with this metric). 
-
-
----
-
-
-## Creating new experiments
-
-A quick guide how to create your own experiments using the simulator. Every experiment has to have a configuration `.yaml` file, which holds the initial parameters for the queues and controls the component instantiation process. You may use one of the attached examples as a starting point and modify it.
-
-
-### Yaml config file
-
-The configuration file is a collection that holds the following root keys:
-- `workers` -- either an integer (number of workers) or a list of collections, each collection is used as an initial set of attributes for one worker
-- `dispatcher` -- component specification for the Dispatcher module
-- `sa_strategy` -- component specification for the SA strategy module
-- `period` -- an integer that indicates, how often is the `do_adapt` method of the SA strategy invoked (in seconds of the simulation time)
-- `metrics` -- a list of components specifications of Metric modules (all listed modules are used for analysis and their results are printed at the end)
-
-A component specification value is either a string (a full name of the component class), for instance `experiments.simple.dispatcher.SimpleDispatcher` refers to a class `SimpleDispatcher` in `dispatcher.py` file in the `experiments/simple` subdirectory, or a collection which holds:
-- `class` - a full name of the component class as explained above
-- `args` - arguments passed to the constructor of that class when it is being instantiated
-The `args` can be stored either as a list (positional arguments) or collection (named arguments).
-
-All arguments are treated as static constants; however, in some cases, we need to express the injection pattern as well. For this purpose, we define *injected arguments* as arguments that are replaced with explicit values before being passed to the constructor. The injected arguments are always strings prefixed with `@@`. At the moment, the simulator implements the following injections:
-- `@@ref_jobs` - injects the list of loaded reference solution jobs (requires that `--refs` command line option is used; otherwise the simulation fails)
-
-
-### Dispatcher and strategy classes
-
-Both the dispatcher and self-adaptive strategy are classes that must implement interface prescribed in [`interfaces.py`](https://github.com/smartarch/simdex/blob/main/simulation/interfaces.py) --- `AbstractDispatcher` and `AbstractSelfAdaptingStrategy`.
-
-Namely, the **dispatcher** class must implement 
+A dispatcher is classes that must implement `AbstractDispatcher` interface prescribed in [`interfaces.py`](interfaces.py). Namely, it must implement 
 ```python
-def dispatch(self, job, workers):
+def dispatch(self, job, workers, simulation):
 ```
 method which is responsible for job dispatching. It gets a list of all worker queues, selects the right one and places the job inside by calling `worker.enqueue(job)`.
 
 Optionally, it may implement
 ```python
-def init(self, ts, workers):
+def init(self, simulation):
 ```
-method that is called once when the dispatcher is being initialized. The `ts` holds timestamp when the simulation starts (in virtual time).
+method that is called once when the dispatcher is being initialized. The `simulation` holds a reference to the `Simulation` object.
 
-The **self-adapting strategy** must implement
-```python
-def do_adapt(self, ts, dispatcher, workers, job=None):
-```
-method, which is the generic interface for invoking MAPE-K loop (or similar concept). Whether actual `do_adapt` call performs only the monitoring step, or whether it performs the entire loop including the execution of modifications is completely up to the implemented SA component.
+#### Predefined dispatchers
 
-This method is invoked periodically by the simulator (period is given in the configuration) and right before dispatching the job. The periodic calls have `job=None`, otherwise `job` holds the job that is about to be dispatched. The `dispatcher` argument holds the actual dispatcher object, so that SA strategy may execute modifications via whatever interface the author of the experiment has defined between these two components.
+The example presented in the paper uses ML and RL for dispatching of the jobs. An ML-based `DurationPredictor` is used to predict the duration of a given job. An RL-based `WorkerSelector` is used to select the worker the job shall be dispatched to.
 
-Similarly to the dispatcher, SA strategy may implement
-```python
-def init(self, ts, dispatcher, workers):
-```
-method that is invoked once at the beginning.
+Currently, there are two dispatchers implemented:
 
-Please note that both dispatcher and SA strategy should refrain from accessing `duration`, `correctness`, and `compilation_ok` properties of the `Job` data class before the job is actually processed (i.e., after it has its `finish_ts` time computed and current simulation time is greater than `finish_ts`).
+* `DurationFilterDispatcher` ([dispatchers.py](dispatchers.py) module) -- predicts the duration (using the `DurationPredictor` component) of the job and dispatches it to the worker with appropriate duration limit (the maximum allowed job duration) and with the shortest queue
+  * requires the `duration_predictor` to be defined in the configuration (see below)
+  * requires the `workers` in the configuration to have a `limit` attribute which defines the maximum allowed job duration
 
+* `WorkerSelectorDispatcher` ([dispatchers.py](dispatchers.py) module) -- uses the `WorkerSelector` component to select the worker
+  * requires the `worker_selector` to be defined in the configuration (see below)
+
+## Experiments
+
+A more detailed description of the experiments can be found alongside the configurations in the [experiments](experiments) folder.
+
+The results of the experiments are evaluated by metrics.
+
+### Predefined metrics
+
+There are several predefined metric collectors:
+
+* `PowerMetricsCollector` ([default.py](metrics/default.py) module) -- computes total time the queues were active (i.e., power consumption of the workers); it is printed out as relative value (1.0 = one worker queue was active on average). This metric is not used in the experiments for the current paper.
+
+* `JobDelayMetricsCollector` ([default.py](metrics/default.py) module) -- computes average and maximal job delay
+
+* `UserExperienceMetricsCollector` ([user_experience](metrics/user_experience.py) module) -- computes user experience by dividing jobs into three categories:
+  - *on time* -- minimal or no delay
+  - *delayed* -- noticeable, yet still acceptable delay
+  - *late* -- significant (potentially problematic) delay
+  
+  The output is three numbers -- how many of the jobs felt into each category. The categories are based on duration estimates and multiplication constants (e.g., if job delay is less than `1.5x` its expected duration, it is considered on time). The expected durations are computed from reference solutions jobs (i.e., the `--refs` option must be used when executing the experiment with this metric).
+
+* `UserExperienceMetricsCollectorWithHistory` ([user_experience](metrics/user_experience.py) module) -- extension of the `UserExperienceMetricsCollector` which prints the number of on-time, delayed, and late jobs periodically through the run of the simulation (this helps to see whether there is any trend in the data, e.g. learning takes some time and the results are worse in the beginning of the simulation)
+
+* `JobDelayQuantilesCollector` ([quantile.py](metrics/quantile.py) module) -- computes the quantiles of the job delay
 
 ### Defining new metrics
 
@@ -153,3 +107,25 @@ Finally, the metric component must provide a printing method that outputs the fi
 def print(self, machine=False, verbose=False):
 ```
 The two flags may affect the printing data. The `machine` flag indicates that the output will be collected and processed by a script (probably when a batch of simulations is being executed). The `verbose` flag indicates that the user desires a more detailed output. Both flags may be ignored if not relevant for a particular metric collector.
+
+
+## Experiment configuration files
+
+Every experiment has to have a configuration `.yaml` file, which holds the initial parameters for the queues and controls the component instantiation process. Examples of the configuration files can be found in the [experiments](experiments) directory.
+
+The configuration file is a collection that holds the following root keys:
+- `workers` -- either an integer (number of workers) or a list of collections, each collection is used as an initial set of attributes for one worker
+- `dispatcher` -- component specification for the dispatcher
+- `duration_predictor` -- component specification for the duration predictor
+- `worker_selector` -- component specification for the worker selector
+- `period` -- an integer that indicates, how often is the `periodic_monitoring` method is invoked on the `system_monitor` of ML and RL components (in seconds of the simulation time)
+- `metrics` -- a list of components specifications of metric modules (all listed modules are used for analysis and their results are printed at the end)
+
+A component specification value is either a string (a full name of the component class), for instance `dispatchers.WorkerSelectorDispatcher` refers to a class `WorkerSelectorDispatcher` in `dispatchers.py` file, or a collection which holds:
+- `class` - a full name of the component class as explained above
+- `args` - arguments passed to the constructor of that class when it is being instantiated
+The `args` can be stored either as a list (positional arguments) or collection (named arguments).
+
+All arguments are treated as static constants; however, in some cases, we need to express the injection pattern as well. For this purpose, we define *injected arguments* as arguments that are replaced with explicit values before being passed to the constructor. The injected arguments are always strings prefixed with `@@`. At the moment, the simulator implements the following injections:
+- `@@ref_jobs` -- injects the list of loaded reference solution jobs (requires that `--refs` command line option is used; otherwise the simulation fails)
+- `@@hash_converters` -- injects the `HashConverter` instances used to convert the identifiers of jobs, exercises, etc. when loading the data

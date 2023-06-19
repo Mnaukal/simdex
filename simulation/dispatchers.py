@@ -26,7 +26,7 @@ class DurationFilterDispatcher(AbstractDispatcher):
         if not best_workers:
             best_workers = active_workers  # fallback, if no worker passes the limit
 
-        best_workers.sort(key=lambda w: w.jobs_count())
+        best_workers.sort(key=lambda w: w.jobs_count())  # TODO: use estimated duration instead of number of jobs
         target = best_workers[0]
         target.enqueue(job)
 
@@ -35,9 +35,10 @@ class WorkerSelectorDispatcher(AbstractDispatcher):
     """Dispatcher that uses the simulation.workers_selector to select the best worker."""
 
     def dispatch(self, job, workers, simulation):
-        # we need to estimate the duration of the job first (! no peeking to job.duration !)
-        estimate = simulation.duration_predictor.predict_duration(job)
-        job.estimated_duration = estimate
+        if simulation.duration_predictor is not None:
+            # we need to estimate the duration of the job first (! no peeking to job.duration !)
+            estimate = simulation.duration_predictor.predict_duration(job)
+            job.estimated_duration = estimate
 
         worker_index = simulation.worker_selector.select_worker(simulation, job)
 
