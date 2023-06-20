@@ -9,10 +9,10 @@ class StatisticalDurationPredictor(AbstractDurationPredictor):
         def __init__(self, parent: 'StatisticalDurationPredictor'):
             self.parent = parent
 
-        def job_done(self, simulation, job):
+        def job_finished(self, simulation, job):
             self.parent.duration_index.add(job)
 
-        def ref_job_done(self, simulation, ref_job):
+        def ref_job_finished(self, simulation, ref_job):
             self.parent.duration_index.add(ref_job)
 
     def __init__(self, configuration):

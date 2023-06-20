@@ -1,3 +1,9 @@
+"""
+Neural-network-based regression model to predict the job duration.
+The software architecture of the predictor consists of several components.
+More details are described in the paper.
+"""
+
 import os
 
 from helpers import Timer, log_with_time
@@ -19,6 +25,11 @@ except RuntimeError:  # "Inter op parallelism cannot be modified after initializ
 
 
 class MLModel:
+    """
+    Implementation of a feedforward neural network model (in TensorFlow).
+    Inputs: [job.exercise_id, job.runtime_id]
+    Output: job.duration
+    """
 
     def __init__(self, copy_from: 'MLModel' = None, **model_params):
         if copy_from:
@@ -64,13 +75,16 @@ class MLModel:
         return lambda feature: tf.one_hot(feature, size + 1)  # +1 since classes are labeled from 1
 
     def fit(self, x, y, **kwargs):
+        """Train the model on the given data. Both x and y are batches of training examples."""
         return self.model.fit(x, y, **kwargs)
 
     def predict(self, x, **kwargs) -> list:
+        """Predict the job duration for a given batch of data."""
         return self.model(x, **kwargs).numpy()
 
 
 class Inference:
+    """Handles the inference (the prediction of the job duration)"""
 
     def __init__(self):
         self.model: MLModel = ...
@@ -83,6 +97,7 @@ class Inference:
 
 
 class DataStorage:
+    """Stores the training data."""
 
     def __init__(self):
         self.x_buffer = []
@@ -102,7 +117,8 @@ class DataStorage:
         return x, y
 
 
-class DataProcessor:
+class DataPreprocessor:
+    """Preprocesses the data (both for training and inference) into a format suitable for the neural network model."""
 
     @staticmethod
     def job_to_input(job):
@@ -120,18 +136,20 @@ class DataProcessor:
 
 
 class SystemMonitor(AbstractSystemMonitor):
+    """Monitors the state of the system and handles the events such as job_finished."""
 
     def __init__(self, parent: 'NNDurationPredictor'):
         self.parent = parent
 
-    def job_done(self, simulation, job):
+    def job_finished(self, simulation, job):
         self.parent.add_training_datum(job)
 
-    def ref_job_done(self, simulation, ref_job):
+    def ref_job_finished(self, simulation, ref_job):
         self.parent.add_training_datum(ref_job)
 
 
 class MLMonitor:
+    """Monitors the ML inference, data storage, etc. and initiates training and updating the inference model."""
 
     def __init__(self, parent: 'NNDurationPredictor', training_interval, configuration):
         self.parent = parent
@@ -142,6 +160,7 @@ class MLMonitor:
         self.training_timer = Timer("ML Duration Predictor training time", configuration["output_folder"] / "duration_predictor_training_times.csv")
 
     def job_added(self, job):
+        """Called when a new training example (job) is added to the DataStorage."""
         self.data_since_last_training += 1
         if self.data_since_last_training >= self.training_interval:
             self.parent.training.train()
@@ -150,6 +169,7 @@ class MLMonitor:
 
 
 class Training:
+    """Performs the training of the neural network model."""
 
     def __init__(self, parent: 'NNDurationPredictor', batch_size, training_epochs):
         self.parent = parent
@@ -178,6 +198,7 @@ class Training:
 
 
 class MLModelStorage:
+    """The trained ML models are stored in this class."""
 
     def __init__(self):
         self.models = deque(maxlen=10)  # keep the last 10 models
@@ -197,7 +218,7 @@ class NNDurationPredictor(AbstractBatchedDurationPredictor):
 
         self.system_monitor = SystemMonitor(self)
         self.ml_monitor = MLMonitor(self, training_interval, configuration)
-        self.data_processor = DataProcessor()
+        self.data_processor = DataPreprocessor()
         self.training = Training(self, batch_size, training_epochs)
         self.ml_model_storage = MLModelStorage()
         self.data_storage = DataStorage()

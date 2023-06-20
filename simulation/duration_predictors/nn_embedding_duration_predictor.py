@@ -3,13 +3,18 @@ os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "2")  # Report only TF errors by d
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # Disable GPU in TF. The models are small, so it is actually faster to use the CPU.
 import tensorflow as tf
 
-from duration_predictors.nn_duration_predictor import NNDurationPredictor, MLModel, DataProcessor
+from duration_predictors.nn_duration_predictor import NNDurationPredictor, MLModel, DataPreprocessor
 from constants import RUNTIME_ID_COUNT, EXERCISE_ID_COUNT, TL_GROUP_COUNT
 from jobs import ReaderBase
 from helpers import log_with_time
 
 
 class EmbeddingsMLModel(MLModel):
+    """
+    Implementation of a feedforward neural network model (in TensorFlow) with an embedding layer for exercise_id.
+    Inputs: [job.exercise_id, job.runtime_id, job.tlgroup_id]
+    Output: job.duration
+    """
 
     def __init__(self, copy_from, **model_params):
         self.embedding_dim = model_params['embedding_dim']
@@ -86,7 +91,8 @@ class EmbeddingsMLModel(MLModel):
         log_with_time("Embeddings training done.")
 
 
-class EmbeddingsDataProcessor(DataProcessor):
+class EmbeddingsDataPreprocessor(DataPreprocessor):
+    """Preprocesses the data (both for training and inference) into a format suitable for the embeddings neural network model."""
 
     @staticmethod
     def job_to_input(job):
@@ -94,7 +100,7 @@ class EmbeddingsDataProcessor(DataProcessor):
 
 
 class NNEmbeddingDurationPredictor(NNDurationPredictor):
-    """Uses neural network regression model to predict the job duration. The model is implemented in TensorFlow."""
+    """Uses neural network regression model (with an embedding layer) to predict the job duration. The model is implemented in TensorFlow."""
 
     def __init__(self, layer_widths=[256], training_interval=1000, batch_size=1000, training_epochs=5, hash_converters=None, embedding_training_data=None, embedding_dim=100, embedding_batch_size=5000, embedding_training_epochs=20, configuration=None):
         super().__init__(layer_widths, training_interval, batch_size, training_epochs, configuration)
@@ -106,7 +112,7 @@ class NNEmbeddingDurationPredictor(NNDurationPredictor):
             'embedding_batch_size': embedding_batch_size,
             'embedding_training_epochs': embedding_training_epochs
         })
-        self.data_processor = EmbeddingsDataProcessor()
+        self.data_processor = EmbeddingsDataPreprocessor()
 
     def _create_initial_model(self):
         return EmbeddingsMLModel(None, **self.model_params)

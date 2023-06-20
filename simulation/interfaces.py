@@ -1,6 +1,5 @@
-#
-# Base classes for important components and helper functions for dynamic loading and instantiation of their implementations.
-#
+"""Base classes for important components."""
+
 import abc
 from typing import TYPE_CHECKING
 
@@ -14,7 +13,7 @@ if TYPE_CHECKING:
 class AbstractMetricsCollector(abc.ABC):
     """Base class for all metrics collectors.
 
-    The snapshot() is invoked before every MAPE-K loop invocation to capture workers state periodically.
+    The snapshot() is invoked periodically (to capture workers state).
     The job_finished() is invoked for every job after it is removed from the queue.
     """
 
@@ -38,7 +37,6 @@ class AbstractDispatcher(abc.ABC):
     """Base class (interface declaration) for all dispatchers.
 
     Dispatcher is responsible for assigning jobs into worker queues.
-    Dispatcher itself runs a fixed algorithm, but its behavior may be altered in MAPE-K loop.
     """
 
     def __init__(self, configuration: dict):
@@ -55,6 +53,14 @@ class AbstractDispatcher(abc.ABC):
 
 
 class AbstractSystemMonitor:
+    """Base class (interface declaration) for components monitoring the events in the system.
+
+    The available events are:
+    - periodic_monitoring
+    - job_dispatched
+    - job_finished
+    - ref_job_finished
+    """
 
     def periodic_monitoring(self, simulation: 'Simulation'):
         """The method is called periodically."""
@@ -64,16 +70,17 @@ class AbstractSystemMonitor:
         """The method is called after a job is dispatched."""
         pass
 
-    def job_done(self, simulation: 'Simulation', job: 'Job'):
+    def job_finished(self, simulation: 'Simulation', job: 'Job'):
         """The method is called after a job is finished."""
         pass
 
-    def ref_job_done(self, simulation: 'Simulation', ref_job: 'RefJob'):
+    def ref_job_finished(self, simulation: 'Simulation', ref_job: 'RefJob'):
         """The method is called after a reference job is finished."""
         pass
 
 
 class OnlineMLComponent:
+    """Base class for components with online ML capabilities. It just declares that these components have a system_monitor (AbstractSystemMonitor)."""
 
     def __init__(self):
         self.system_monitor: AbstractSystemMonitor = self._init_system_monitor()
@@ -83,14 +90,17 @@ class OnlineMLComponent:
 
 
 class AbstractDurationPredictor(OnlineMLComponent, abc.ABC):
+    """Base class (interface declaration) for components that predict the duration of a job."""
 
     def __init__(self, configuration: dict):
         super().__init__()
 
     def init(self, simulation: 'Simulation'):
+        """Initialize the component before the first job."""
         pass
 
     def end(self, simulation: 'Simulation'):
+        """Wrap up the simulation after the last job."""
         pass
 
     @abc.abstractmethod
@@ -100,7 +110,7 @@ class AbstractDurationPredictor(OnlineMLComponent, abc.ABC):
 
 
 class AbstractBatchedDurationPredictor(AbstractDurationPredictor, abc.ABC):
-    """TODO: predicts in batches to speed up the simulation."""
+    """Helper class that handles predictions of the job duration in batches."""
 
     def __init__(self, configuration: dict):
         super().__init__(configuration)
@@ -108,9 +118,11 @@ class AbstractBatchedDurationPredictor(AbstractDurationPredictor, abc.ABC):
 
     @abc.abstractmethod
     def _predict_batch(self, jobs) -> list:
+        """Predict the duration of a batch of jobs."""
         pass
 
     def precompute_batch(self, jobs):
+        """Computes the predictions and saves them in the cache."""
         predictions = self._predict_batch(jobs)
         self.duration_prediction_cache = dict(zip(jobs, predictions))
 
@@ -122,14 +134,17 @@ class AbstractBatchedDurationPredictor(AbstractDurationPredictor, abc.ABC):
 
 
 class AbstractWorkerSelector(OnlineMLComponent, abc.ABC):
+    """Base class (interface declaration) for components that select a worker for a given job."""
 
     def __init__(self, configuration: dict):
         super().__init__()
 
     def init(self, simulation: 'Simulation'):
+        """Initialize the component before the first job."""
         pass
 
     def end(self, simulation: 'Simulation'):
+        """Wrap up the simulation after the last job."""
         pass
 
     @abc.abstractmethod

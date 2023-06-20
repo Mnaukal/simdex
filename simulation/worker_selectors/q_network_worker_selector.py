@@ -8,6 +8,7 @@ from interfaces import AbstractSystemMonitor, AbstractWorkerSelector
 
 
 class Inference:
+    """Handles the inference (the selection of an action – worker for a job) using the Q-network."""
 
     def __init__(self, epsilon_initial, epsilon_final, epsilon_final_after_jobs):
         self.q_network: DoubleQNetwork = ...
@@ -17,6 +18,7 @@ class Inference:
         self.dispatched_jobs = 0
 
     def select_action(self, state):
+        """Selects an action (worker for a job) using the predictions by a Q-network and epsilon-greedy algorithm."""
         q_values = self.q_network.predict_one(state)
 
         # epsilon-greedy action selection
@@ -38,6 +40,7 @@ Transition = collections.namedtuple("Transition", ["state", "action", "reward", 
 
 
 class DataStorage:
+    """Stores the training data (transitions) in a buffer with limited size."""
 
     def __init__(self, parent: "QNetworkWorkerSelector", replay_buffer_size):
         self.parent = parent
@@ -46,21 +49,21 @@ class DataStorage:
 
     def add_state(self, job, state: np.ndarray):
         self.incomplete_data[job]["state"] = state
-        self.add_transition_if_complete(job)
+        self._add_transition_if_complete(job)
 
     def add_action(self, job, action: int):
         self.incomplete_data[job]["action"] = action
-        self.add_transition_if_complete(job)
+        self._add_transition_if_complete(job)
 
     def add_reward(self, job, reward: float):
         self.incomplete_data[job]["reward"] = reward
-        self.add_transition_if_complete(job)
+        self._add_transition_if_complete(job)
 
     def add_next_state(self, job, next_state: np.ndarray):
         self.incomplete_data[job]["next_state"] = next_state
-        self.add_transition_if_complete(job)
+        self._add_transition_if_complete(job)
 
-    def add_transition_if_complete(self, job):
+    def _add_transition_if_complete(self, job):
         job_data = self.incomplete_data[job]
         if "state" in job_data and \
                 "action" in job_data and \
@@ -75,10 +78,12 @@ class DataStorage:
         return len(self.replay_buffer)
 
     def sample_batch(self, batch_size):
+        """Sample a random batch of transitions from the buffer."""
         return self.replay_buffer.sample(batch_size)
 
 
-class DataProcessor:
+class DataPreprocessor:
+    """Preprocesses the data (both for training and inference) into a format suitable for the RL – state. It is also used to compute the rewards for RL."""
 
     class EmptyJob:
         estimated_duration = 0
@@ -114,11 +119,12 @@ class DataProcessor:
 
 
 class SystemMonitor(AbstractSystemMonitor):
+    """Monitors the state of the system and handles the events such as job_finished and periodic monitoring."""
 
     def __init__(self, parent: 'QNetworkWorkerSelector'):
         self.parent = parent
 
-    def job_done(self, simulation, job):
+    def job_finished(self, simulation, job):
         reward = self.parent.data_processor.compute_reward(simulation, job)
         self.parent.data_storage.add_reward(job, reward)
         next_state = self.parent.data_processor.get_next_state(simulation, job)
@@ -130,6 +136,7 @@ class SystemMonitor(AbstractSystemMonitor):
 
 
 class MLMonitor:
+    """Monitors the ML inference, data storage, etc. and initiates training and updating the inference model."""
 
     def __init__(self, parent: 'QNetworkWorkerSelector', training_interval, configuration):
         self.parent = parent
@@ -150,6 +157,7 @@ class MLMonitor:
 
 
 class Training:
+    """Performs the training of the Q-network model."""
 
     def __init__(self, parent: 'QNetworkWorkerSelector', batch_size):
         self.parent = parent
@@ -169,6 +177,7 @@ class Training:
 
 
 class QNetworkWorkerSelector(AbstractWorkerSelector):
+    """Uses the DQN algorithm to select a worker for a job."""
 
     def __init__(self, epsilon_initial=0.3, epsilon_final=0.01, epsilon_final_after_jobs=10_000, batch_size=64, replay_buffer_size=50_000, training_interval=1, configuration=None, **q_network_args):
         super().__init__(configuration)
@@ -178,14 +187,14 @@ class QNetworkWorkerSelector(AbstractWorkerSelector):
 
         self.system_monitor = SystemMonitor(self)
         self.ml_monitor = MLMonitor(self, training_interval, configuration)
-        self.data_processor = DataProcessor()
+        self.data_processor = DataPreprocessor()
         self.training = Training(self, batch_size)
         self.data_storage = DataStorage(self, replay_buffer_size)
         self.inference = Inference(epsilon_initial, epsilon_final, epsilon_final_after_jobs)
 
     def init(self, simulation):
         worker_count = len(simulation.workers)
-        self.q_network = DoubleQNetwork(inputs_count=DataProcessor.state_size(simulation), actions_count=worker_count, **self.q_network_args)
+        self.q_network = DoubleQNetwork(inputs_count=DataPreprocessor.state_size(simulation), actions_count=worker_count, **self.q_network_args)
         self.inference.set_model(self.q_network)
 
     def end(self, simulation):

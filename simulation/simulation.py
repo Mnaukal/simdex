@@ -81,9 +81,9 @@ class Simulation:
                     metric.job_finished(job)
                 # invoke System monitoring on ML components
                 if self.duration_predictor:
-                    self.duration_predictor.system_monitor.job_done(self, job)
+                    self.duration_predictor.system_monitor.job_finished(self, job)
                 if self.worker_selector:
-                    self.worker_selector.system_monitor.job_done(self, job)
+                    self.worker_selector.system_monitor.job_finished(self, job)
 
     def __advance_time_ref_jobs(self):
         while len(self.ref_jobs) > 0 and self.ref_jobs[-1].spawn_ts + self.ref_jobs[-1].duration <= self.ts:
@@ -91,9 +91,9 @@ class Simulation:
             if job.compilation_ok:
                 # invoke System monitoring on ML components
                 if self.duration_predictor:
-                    self.duration_predictor.system_monitor.ref_job_done(self, job)
+                    self.duration_predictor.system_monitor.ref_job_finished(self, job)
                 if self.worker_selector:
-                    self.worker_selector.system_monitor.ref_job_done(self, job)
+                    self.worker_selector.system_monitor.ref_job_finished(self, job)
 
     def __advance_time(self, ts):
         """Advance the simulation to given point in time, invoking System monitoring periodically."""
