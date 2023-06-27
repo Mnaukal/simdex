@@ -1,4 +1,6 @@
 /.not-versioned
 __pycache__
 /simulation/.vscode
-/results/
+/results/*
+!/results/experiments.ipynb
+!/results/README.md

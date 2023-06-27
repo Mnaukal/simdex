@@ -47,4 +47,5 @@ Additional options recognized by the main script:
 
 - [Simulator overview and quick guide to creating your own experiments](simulation)
 - [Description of our experiments for the paper](simulation/experiments)
+- [Summary of the results](results)
 - [Dataset details](data)
