@@ -2,6 +2,7 @@ from datetime import timedelta
 import ruamel.yaml as yaml
 
 from duration_predictors.nn_duration_predictor import NNDurationPredictor
+from helpers import Timer
 from metrics.default import JobDelayMetricsCollector
 from metrics.user_experience import UserExperienceMetricsCollector
 from worker_selectors.q_network_worker_selector import QNetworkWorkerSelector
@@ -54,10 +55,11 @@ def save_results(file_name, simulation, simulation_duration: timedelta):
                 data['jobs_delayed_percentage'] = metric.jobs_delayed / metric.get_total_jobs()
                 data['jobs_late_percentage'] = metric.jobs_late / metric.get_total_jobs()
 
-        def save_timer(timer, name):
+        def save_timer(timer: Timer, name):
             data[name] = timer.get_average_time()
             data[name + '_count'] = timer.count
-            data[name + '_total'] = timer.total_time.total_seconds()
+            data[name + '_total'] = timer.get_total_time()
+            data[name + '_total_ns'] = timer.get_total_time_ns()
 
         save_timer(simulation.dispatch_timer, 'dispatch_time')
 

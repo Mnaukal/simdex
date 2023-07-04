@@ -40,7 +40,7 @@ class MLModel:
         self._compile()
 
         # run the model once with a dummy input to initialize it
-        self.model(tf.zeros([1 if s is None else s for s in self.model.input_shape]))
+        self.model(tf.ones([1 if s is None else s for s in self.model.input_shape]))
 
     def _create_model(self, **model_params):
         layer_widths = model_params['layer_widths']
