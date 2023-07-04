@@ -1,6 +1,6 @@
-# TODO: title
+# Simdex-ML: an online ML reference example
 
-This is an accompanying repository for a paper called "TODO", which was submitted to the ECSA 2023 Tools & Demos track.
+This is an accompanying repository for a paper called "Simdex-ML: an online ML reference example", which was submitted to the ECSA 2023 Tools & Demos track.
 
 It builds on the "SIMDEX: ReCodEx Backend Simulator and Dataset" artifact ([source code](https://github.com/smartarch/simdex), [paper](https://doi.org/10.1145/3524844.3528078)).
 
