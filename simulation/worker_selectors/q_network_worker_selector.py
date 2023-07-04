@@ -124,11 +124,13 @@ class SystemMonitor(AbstractSystemMonitor):
     def __init__(self, parent: 'QNetworkWorkerSelector'):
         self.parent = parent
 
+    def job_dispatched(self, simulation, job):
+        next_state = self.parent.data_processor.get_next_state(simulation, job)
+        self.parent.data_storage.add_next_state(job, next_state)
+
     def job_finished(self, simulation, job):
         reward = self.parent.data_processor.compute_reward(simulation, job)
         self.parent.data_storage.add_reward(job, reward)
-        next_state = self.parent.data_processor.get_next_state(simulation, job)
-        self.parent.data_storage.add_next_state(job, next_state)
 
     def periodic_monitoring(self, simulation):
         """The method is called periodically."""
