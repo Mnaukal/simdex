@@ -29,6 +29,8 @@ class DoubleQNetwork:
         # run the model once with a dummy input to initialize it
         self.predict_one(np.ones(self._network.input_shape[1:]))
 
+        # self._network.summary()
+
     @staticmethod
     def _construct_model(inputs_count, actions_count, layer_widths, learning_rate) -> tf.keras.Model:
         input_layer = tf.keras.layers.Input(inputs_count)

@@ -42,6 +42,8 @@ class MLModel:
         # run the model once with a dummy input to initialize it
         self.model(tf.ones([1 if s is None else s for s in self.model.input_shape]))
 
+        # self.model.summary()
+
     def _create_model(self, **model_params):
         layer_widths = model_params['layer_widths']
         all_inputs, encoded_features = self._prepare_inputs()
@@ -57,7 +59,6 @@ class MLModel:
     def _compile(self):
         learning_rate = tf.keras.experimental.CosineDecay(0.01, 10_000_000)
         self.model.compile(optimizer=tf.optimizers.Adam(learning_rate=learning_rate), loss=tf.losses.Poisson(), metrics=['mse'])
-        # model.summary()
 
     def _prepare_inputs(self):
         all_inputs = tf.keras.Input(shape=(2,), dtype='int32')
@@ -112,8 +113,10 @@ class DataStorage:
         return len(self.x_buffer)
 
     def get_batch(self, batch_size) -> tuple:
-        x = np.array(self.x_buffer[-batch_size:])
-        y = np.array(self.y_buffer[-batch_size:])
+        self.x_buffer = self.x_buffer[-batch_size:]
+        self.y_buffer = self.y_buffer[-batch_size:]
+        x = np.array(self.x_buffer)
+        y = np.array(self.y_buffer)
         return x, y
 
 
